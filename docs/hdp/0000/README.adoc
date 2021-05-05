@@ -1,0 +1,20 @@
+:state: Approved
+:date: 2021-05-07
+:labels: design
+
+Hypatia Design Proposals
+========================
+
+Hypatia is described using a set of design proposals.
+These loosely follow the Oxide RFD format, and are
+in `asciidoc`.
+
+They go through states:
+
+* needed
+* draft
+* discussion
+* approved
+* abandoned
+
+We use a consensus model.

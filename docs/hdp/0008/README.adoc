@@ -1,0 +1,9 @@
+:state: Needed
+:date: 2021-05-07
+:labels: design
+
+Hypatia Virtual Machines
+========================
+
+Describes virtual machines in Hypatia as a collection
+of tasks, how their virtual memories relate, etc.

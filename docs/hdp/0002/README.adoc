@@ -1,0 +1,33 @@
+:state: Needed
+:date: 2021-05-07
+:labels: design, 
+
+Terms and Definitions
+=====================
+
+For coherence across developers, we use a set of consistent
+terms and definitions throughout Hypatia.  This is the
+repository of such terms.
+
+Hypervisor::
+The combination of kernel and userspace
+
+Hyperkernel::
+The bare-metal kernel that runs directly on the host.
+It owns and allocates the hardware, and provides services
+to virtual machines.
+
+Virtual Machine Monitor (VMM)::
+The userspace portion of the hypervisor.  Note that in
+Hypatia, this typically runs the a root VM.
+
+Virtual Machine (VM)::
+An instance of a virtual machine that runs under the
+hypervisor.
+
+Root VM::
+A specially privileged virtual machine, designed to run
+the control plane.
+
+Control plane::
+The control software that directs the 

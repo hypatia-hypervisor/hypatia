@@ -1,0 +1,14 @@
+[workspace]
+
+members = [
+    "arch",
+    "devices",
+    "libhypatia",
+    "memory",
+    "scheduler",
+    "supervisor",
+    "theon",
+    "uart",
+    "vcpu",
+    "vm",
+]

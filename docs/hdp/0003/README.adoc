@@ -1,0 +1,19 @@
+:state: Needed
+:date: 2021-05-07
+:labels: design
+
+Overall System Architecture
+===========================
+
+Hypatia is structured as a set of cooperating
+tasks that run in their own address spaces.  Related
+tasks are grouped together into a task set.  Tasks
+can request services from ever-present components.
+
+Tasks
+-----
+vcpu::
+A task type that runs a VCPU on behalf a virtual machine
+
+vmctl::
+A virtual machine control task
