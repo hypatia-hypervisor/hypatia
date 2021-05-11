@@ -1,0 +1,8 @@
+#!/bin/sh
+TARGET_PATH=target/x86_64-unknown-none-elf/debug
+
+./mk
+qemu-system-x86_64 \
+    -nographic \
+    -kernel ${TARGET_PATH}/theon-32 \
+    -cpu kvm64,+rdtscp,+pdpe1gb,+fsgsbase
