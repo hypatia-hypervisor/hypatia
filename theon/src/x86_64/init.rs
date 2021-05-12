@@ -1,5 +1,6 @@
 use uart;
 
 pub fn start() {
-    uart::panic_println!("Hello, World!");
+    uart::panic_println!("\nBooting Hypatia...");
+    panic!("Don't know how to do that yet!");
 }

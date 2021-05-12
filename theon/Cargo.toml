@@ -12,3 +12,4 @@ zerocopy = "*"
 goblin = { version = "*", default-features = false, features = ["elf64"] }
 arch = { path = "../arch" }
 uart = { path = "../uart" }
+libhypatia = { path = "../libhypatia" }

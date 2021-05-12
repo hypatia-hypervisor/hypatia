@@ -27,7 +27,8 @@ mod runtime {
     use core::panic::PanicInfo;
 
     #[panic_handler]
-    pub extern "C" fn panic(_info: &PanicInfo) -> ! {
+    pub extern "C" fn panic(info: &PanicInfo) -> ! {
+        libhypatia::panic::print_panic(info);
         #[allow(clippy::empty_loop)]
         loop {}
     }

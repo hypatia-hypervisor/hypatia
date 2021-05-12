@@ -1,4 +1,4 @@
-STACKSIZE =		4096
+STACKSIZE =		8192
 
 Cr0PE =			1 << 0
 Cr0MP =			1 << 1
