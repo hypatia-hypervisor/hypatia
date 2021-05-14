@@ -63,17 +63,17 @@ FeatureFSGSBase =	1 << 0
 
 KERNZERO =		0xFFFF800000000000
 
-MULTIBOOT1_MAGIC =	0x1BADB002
-MULTIBOOT1_LOAD_MAGIC =	0x2BADB002
-MULTIBOOT1_FLAGS =	1 << 1	// Provide memory map.
+Multiboot1MAGIC =	0x1BADB002
+Multiboot1LoadMAGIC =	0x2BADB002
+Multiboot1FLAGS =	1 << 1	// Provide memory map.
 
 .section .text.boot
 .align 8
 .globl multiboot1_header
 multiboot1_header:
-.int	MULTIBOOT1_MAGIC
-.int	MULTIBOOT1_FLAGS
-.int	-(MULTIBOOT1_MAGIC + MULTIBOOT1_FLAGS)
+	.int	Multiboot1MAGIC
+	.int	Multiboot1FLAGS
+	.int	-(Multiboot1MAGIC + Multiboot1FLAGS)
 
 .code32
 .align 16
@@ -124,7 +124,7 @@ startboot:
 	//
 	// Check multiboot magic
 	popl	%eax
-	cmpl	$MULTIBOOT1_LOAD_MAGIC, %eax
+	cmpl	$Multiboot1LoadMAGIC, %eax
 	je	1f
 	movl	$(EBadMagic - KERNZERO), %edi
 	jmp	earlypanic
@@ -385,21 +385,20 @@ apstart:
 
 .align 16
 gdt:
-// 0: Null segment
-.quad	0
-// 8: Kernel 64-bit code segment
-.quad	(SegREAD + SegCODE + SegALWAYS1 + SegPRESENT + SegLONG)
-// 16: Kernel 32-bit code segment (for bootstrapping APs)
-.quad	(SegREAD + SegCODE + SegALWAYS1 + SegPRESENT + Seg32DEF)
-// 24: Kernel 32-bit data segment (for bootstrapping APs)
-.quad	(SegREAD + SegWRITE + SegALWAYS1 + SegPRESENT + Seg32DEF)
+	// 0: Null segment
+	.quad	0
+	// 8: Kernel 64-bit code segment
+	.quad	(SegREAD + SegCODE + SegALWAYS1 + SegPRESENT + SegLONG)
+	// 16: Kernel 32-bit code segment (for bootstrapping APs)
+	.quad	(SegREAD + SegCODE + SegALWAYS1 + SegPRESENT + Seg32DEF)
+	// 24: Kernel 32-bit data segment (for bootstrapping APs)
+	.quad	(SegREAD + SegWRITE + SegALWAYS1 + SegPRESENT + Seg32DEF)
 egdt:
 
 .skip 6
-
 apgdtdesc:
-.word	egdt - gdt - 1
-.long	(APENTRY + gdt - apstart)
+	.word	egdt - gdt - 1
+	.long	(APENTRY + gdt - apstart)
 
 eapstart:
 
@@ -410,35 +409,35 @@ PtR =		1 << 0
 
 .align 4096
 bootpgtbl:
-	.quad (earlypt3 - KERNZERO) + PtX + PtW + PtR
-	.space (4096/2) - (1*8)
-	.quad (earlypt3 - KERNZERO) + PtX + PtW + PtR
-	.space (4096/2) - (1*8)
+	.quad	(earlypt3 - KERNZERO) + PtX + PtW + PtR
+	.space	(4096/2) - (1*8)
+	.quad	(earlypt3 - KERNZERO) + PtX + PtW + PtR
+	.space	(4096/2) - (1*8)
 
 earlypgtbl:
-	.space (4096/2)
-	.quad (earlypt3 - KERNZERO) + PtX + PtW + PtR
-	.space (4096/2) - (1*8)
+	.space	(4096/2)
+	.quad	(earlypt3 - KERNZERO) + PtX + PtW + PtR
+	.space	(4096/2) - (1*8)
 
 .align 4096
 earlypt3:
-	.quad (0<<30) + PtHUGE + PtX + PtW + PtR
-	.quad (1<<30) + PtHUGE + PtX + PtW + PtR
-	.quad (2<<30) + PtHUGE + PtX + PtW + PtR
-	.quad (3<<30) + PtHUGE + PtX + PtW + PtR
-	.space 4096 - (4*8)
+	.quad	(0<<30) + PtHUGE + PtX + PtW + PtR
+	.quad	(1<<30) + PtHUGE + PtX + PtW + PtR
+	.quad	(2<<30) + PtHUGE + PtX + PtW + PtR
+	.quad	(3<<30) + PtHUGE + PtX + PtW + PtR
+	.space	4096 - (4*8)
 
 .align 16
 .skip 6
 gdtdesc:
-.word	egdt - gdt - 1
-.long	(gdt - KERNZERO)
+	.word	egdt - gdt - 1
+	.long	(gdt - KERNZERO)
 
 .align 16
 .skip 6
 gdtdescv:
-.word	egdt - gdt - 1
-.quad	gdt
+	.word	egdt - gdt - 1
+	.quad	gdt
 
 .bss
 .align 4096
