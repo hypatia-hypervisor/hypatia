@@ -1,0 +1,163 @@
+#[macro_use]
+extern crate clap;
+
+use std::{
+    env,
+    path::{Path, PathBuf},
+    process::{self, Command},
+};
+
+type DynError = Box<dyn std::error::Error>;
+type Result<T> = std::result::Result<T, DynError>;
+
+#[derive(Clone, Copy)]
+enum Build {
+    Debug,
+    Release,
+}
+impl Build {
+    fn dir(self) -> &'static str {
+        match self {
+            Self::Debug => "debug",
+            Self::Release => "release",
+        }
+    }
+
+    fn build_arg(self) -> Option<&'static str> {
+        match self {
+            Self::Debug => None,
+            Self::Release => Some("--release"),
+        }
+    }
+}
+
+fn main() {
+    let matches = clap_app!(xtask =>
+        (version: "0.1.0")
+        (author: "The Hypatia Authors")
+        (about: "Build support for the Hypatia system")
+        (@subcommand build =>
+            (about: "Builds Hypatia")
+            (@arg release: conflicts_with[debug] --release "Build release version")
+            (@arg debug: conflicts_with[release] --debug "Build debug version (default)")
+        )
+        (@subcommand dist =>
+            (about: "Builds multibootable Hypatia images")
+            (@arg release: conflicts_with[debug] --release "Build a release version")
+            (@arg debug: conflicts_with[release] --debug "Build a debug version")
+        )
+        (@subcommand test =>
+            (about: "Builds multibootable Hypatia images")
+            (@arg release: conflicts_with[debug] --release "Build a release version")
+            (@arg debug: conflicts_with[release] --debug "Build a debug version")
+        )
+        (@subcommand qemu =>
+            (about: "Boot Theon under QEMU")
+            (@arg release: conflicts_with[debug] --release "Build a release version")
+            (@arg debug: conflicts_with[release] --debug "Build a debug version")
+        )
+        (@subcommand clean =>
+            (about: "Cargo clean")
+        )
+    )
+    .get_matches();
+    if let Err(e) = match matches.subcommand() {
+        ("build", Some(m)) => build(build_type(&m)),
+        ("dist", Some(m)) => dist(build_type(&m)),
+        ("test", Some(m)) => test(build_type(&m)),
+        ("qemu", Some(m)) => qemu(build_type(&m)),
+        ("clean", _) => clean(),
+        _ => Err("bad subcommand".into()),
+    } {
+        eprintln!("{}", e);
+        process::exit(1);
+    }
+}
+
+fn build_type(matches: &clap::ArgMatches) -> Build {
+    if matches.is_present("release") {
+        return Build::Release;
+    }
+    Build::Debug
+}
+
+fn env_or(var: &str, default: &str) -> String {
+    env::var(var).unwrap_or(default.to_string())
+}
+
+fn cargo() -> String {
+    env_or("CARGO", "cargo")
+}
+fn objcopy() -> String {
+    env_or("OBJCOPY", "llvm-objcopy")
+}
+fn qemu_system_x86_64() -> String {
+    env_or("QEMU", "qemu-system-x86_64")
+}
+fn target() -> String {
+    env_or("TARGET", "x86_64-unknown-none-elf")
+}
+
+fn build(profile: Build) -> Result<()> {
+    let mut cmd = Command::new(cargo());
+    cmd.current_dir(workspace());
+    cmd.arg("build");
+    cmd.arg("--workspace").arg("--exclude").arg("xtask");
+    cmd.arg("-Z").arg("build-std=core,alloc");
+    cmd.arg("--target").arg(format!("lib/{}.json", target()));
+    if let Some(arg) = profile.build_arg() {
+        cmd.arg(arg);
+    }
+    cmd.status()?;
+    Ok(())
+}
+
+fn dist(profile: Build) -> Result<()> {
+    build(profile)?;
+    Command::new(objcopy())
+        .arg("--input-target=elf64-x86-64")
+        .arg("--output-target=elf32-i386")
+        .arg(format!("target/{}/{}/theon", target(), profile.dir()))
+        .arg(format!("target/{}/{}/theon.elf32", target(), profile.dir()))
+        .status()?;
+    Ok(())
+}
+
+fn test(profile: Build) -> Result<()> {
+    let mut cmd = Command::new(cargo());
+    cmd.current_dir(workspace());
+    cmd.arg("test");
+    if let Some(arg) = profile.build_arg() {
+        cmd.arg(arg);
+    }
+    cmd.status()?;
+    Ok(())
+}
+
+fn qemu(profile: Build) -> Result<()> {
+    dist(profile)?;
+    Command::new(qemu_system_x86_64())
+        .arg("-nographic")
+        .arg("-cpu")
+        .arg("kvm64,+rdtscp,+pdpe1gb,+fsgsbase,+x2apic")
+        .arg("-kernel")
+        .arg(format!("target/{}/{}/theon.elf32", target(), profile.dir()))
+        .status()?;
+    Ok(())
+}
+
+fn clean() -> Result<()> {
+    Command::new(cargo())
+        .current_dir(workspace())
+        .arg("clean")
+        .status()?;
+    Ok(())
+}
+
+fn workspace() -> PathBuf {
+    Path::new(&env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(1)
+        .unwrap()
+        .to_path_buf()
+}
