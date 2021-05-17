@@ -24,11 +24,8 @@ impl Build {
     }
 
     fn add_build_arg(self, cmd: &mut Command) {
-        match self {
-            Self::Release => {
-                cmd.arg("--release");
-            }
-            _ => {}
+        if let Self::Release = self {
+            cmd.arg("--release");
         }
     }
 }
@@ -84,7 +81,8 @@ fn build_type(matches: &clap::ArgMatches) -> Build {
 }
 
 fn env_or(var: &str, default: &str) -> String {
-    env::var(var).unwrap_or(default.to_string())
+    let default = default.to_string();
+    env::var(var).unwrap_or(default)
 }
 
 fn cargo() -> String {

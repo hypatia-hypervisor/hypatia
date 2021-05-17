@@ -2,7 +2,6 @@
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
-use arch;
 use arch::io::Sender;
 
 #[cfg_attr(not(test), no_mangle)]

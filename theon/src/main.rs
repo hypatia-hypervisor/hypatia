@@ -14,12 +14,12 @@ mod x86_64;
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() -> ! {
     x86_64::init::start();
-    loop {}
+    panic!("main: end reached");
 }
 
 #[no_mangle]
 pub extern "C" fn apmain() -> ! {
-    loop {}
+    panic!("apmain");
 }
 
 #[cfg(not(test))]
