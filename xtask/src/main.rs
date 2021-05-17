@@ -23,10 +23,12 @@ impl Build {
         }
     }
 
-    fn build_arg(self) -> Option<&'static str> {
+    fn add_build_arg(self, cmd: &mut Command) {
         match self {
-            Self::Debug => None,
-            Self::Release => Some("--release"),
+            Self::Release => {
+                cmd.arg("--release");
+            }
+            _ => {}
         }
     }
 }
@@ -105,9 +107,7 @@ fn build(profile: Build) -> Result<()> {
     cmd.arg("--workspace").arg("--exclude").arg("xtask");
     cmd.arg("-Z").arg("build-std=core,alloc");
     cmd.arg("--target").arg(format!("lib/{}.json", target()));
-    if let Some(arg) = profile.build_arg() {
-        cmd.arg(arg);
-    }
+    profile.add_build_arg(&mut cmd);
     cmd.status()?;
     Ok(())
 }
@@ -127,9 +127,7 @@ fn test(profile: Build) -> Result<()> {
     let mut cmd = Command::new(cargo());
     cmd.current_dir(workspace());
     cmd.arg("test");
-    if let Some(arg) = profile.build_arg() {
-        cmd.arg(arg);
-    }
+    profile.add_build_arg(&mut cmd);
     cmd.status()?;
     Ok(())
 }

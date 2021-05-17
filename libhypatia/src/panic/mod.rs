@@ -12,4 +12,3 @@ pub fn print_panic(info: &PanicInfo) {
     uart::panic_println!("******************************************");
     uart::panic_println!("System halted.");
 }
-
