@@ -1,5 +1,4 @@
 #![feature(asm)]
-#![feature(const_fn)]
 #![feature(core_intrinsics)]
 #![feature(global_asm)]
 #![feature(lang_items)]

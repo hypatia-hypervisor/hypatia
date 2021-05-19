@@ -1,2 +1,2 @@
 #[cfg(not(test))]
-global_asm!(include_str!("boot.S"));
+global_asm!(include_str!("boot.S"), options(att_syntax));
