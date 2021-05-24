@@ -2,7 +2,7 @@
 :date: 2021-05-07
 :labels: design
 
-Hypatia Tasks
-=============
+Hypatia Memory Manager
+======================
 
-Describe tasks and task sets.
+Hypatia Memory Manager

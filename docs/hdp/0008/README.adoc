@@ -2,8 +2,9 @@
 :date: 2021-05-07
 :labels: design
 
-Hypatia Virtual Machines
-========================
+Hypatia Scheduler
+=================
 
-Describes virtual machines in Hypatia as a collection
-of tasks, how their virtual memories relate, etc.
+Hypatia Scheduler
+
+

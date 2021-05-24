@@ -1,0 +1,47 @@
+.TS
+tab(,);
+| l | l.
+_,
+Recursive Page Table, -512 GiB
+_,
+Sideload Recursive PT, -1 TiB
+_,
+Global Area,
+, -2 TiB
+_,
+Monitor,
+, -3 TiB
+_,
+Trace Area,
+, -4 TiB
+_,
+Per-CPU Area,
+, -5 TiB
+_,
+.T&
+c.
+\.
+\.
+\.
+.T&
+| l | l.
+_,
+Supervisor,
+, -10 TiB
+_,
+Memory Manager,
+, -11 TiB
+_,
+Device Manager,
+, -12 TiB
+_,
+Scheduler,
+, -13 TiB
+_,
+Task Set Area,
+, -14 TiB
+_,
+Task,
+, -15 TiB
+_,
+.TE

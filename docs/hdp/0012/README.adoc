@@ -2,7 +2,7 @@
 :date: 2021-05-07
 :labels: design
 
-Hypatia Supervisor
+Hypatia vcpu tasks
 ==================
 
-Hypatia Supervisor
+Describes the vcpu task specifically

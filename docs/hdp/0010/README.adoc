@@ -2,7 +2,8 @@
 :date: 2021-05-07
 :labels: design
 
-Hypatia vcpu tasks
-==================
+Hypatia Virtual Machines
+========================
 
-Describes the vcpu task specifically
+Describes virtual machines in Hypatia as a collection
+of tasks, how their virtual memories relate, etc.

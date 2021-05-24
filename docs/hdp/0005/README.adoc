@@ -2,7 +2,8 @@
 :date: 2021-05-07
 :labels: design
 
-Hypatia Memory Manager
-======================
+Tracing and Debugging in Hypatia
+================================
 
-Hypatia Memory Manager
+Describes support for tracing and debugging in
+Hypatia.

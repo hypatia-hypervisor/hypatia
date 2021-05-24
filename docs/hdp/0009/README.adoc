@@ -2,7 +2,7 @@
 :date: 2021-05-07
 :labels: design
 
-Hypatia vm tasks
-=================
+Hypatia Tasks
+=============
 
-Describes the VM control (vm) task
+Describe tasks and task sets.

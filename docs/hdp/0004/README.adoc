@@ -2,7 +2,7 @@
 :date: 2021-05-07
 :labels: design
 
-Hypatia Supervisor
-==================
+The Hypatia Monitor
+===================
 
-Hypatia Supervisor
+Describes the low-level Hypatia monitor.

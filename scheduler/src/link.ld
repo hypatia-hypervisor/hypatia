@@ -10,7 +10,7 @@
 ENTRY(main)
 
 SECTIONS {
-	. = 0xFFFFFA0000000000;
+	. = 0xFFFFF30000000000;
 
 	.text . :
 	{
