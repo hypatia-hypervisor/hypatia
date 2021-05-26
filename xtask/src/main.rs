@@ -106,18 +106,25 @@ fn build(profile: Build) -> Result<()> {
     cmd.arg("-Z").arg("build-std=core,alloc");
     cmd.arg("--target").arg(format!("lib/{}.json", target()));
     profile.add_build_arg(&mut cmd);
-    cmd.status()?;
+    let status = cmd.status()?;
+    if !status.success() {
+        return Err("build failed".into());
+    }
     Ok(())
 }
 
 fn dist(profile: Build) -> Result<()> {
     build(profile)?;
-    Command::new(objcopy())
+    let status = Command::new(objcopy())
         .arg("--input-target=elf64-x86-64")
         .arg("--output-target=elf32-i386")
         .arg(format!("target/{}/{}/theon", target(), profile.dir()))
         .arg(format!("target/{}/{}/theon.elf32", target(), profile.dir()))
+        .current_dir(workspace())
         .status()?;
+    if !status.success() {
+        return Err("objcopy failed".into());
+    }
     Ok(())
 }
 
@@ -126,27 +133,39 @@ fn test(profile: Build) -> Result<()> {
     cmd.current_dir(workspace());
     cmd.arg("test");
     profile.add_build_arg(&mut cmd);
-    cmd.status()?;
+    let status = cmd.status()?;
+    if !status.success() {
+        return Err("test failed".into());
+    }
     Ok(())
 }
 
 fn qemu(profile: Build) -> Result<()> {
     dist(profile)?;
-    Command::new(qemu_system_x86_64())
+    let status = Command::new(qemu_system_x86_64())
         .arg("-nographic")
         .arg("-cpu")
         .arg("kvm64,+rdtscp,+pdpe1gb,+fsgsbase,+x2apic")
         .arg("-kernel")
         .arg(format!("target/{}/{}/theon.elf32", target(), profile.dir()))
+        .arg("-initrd")
+        .arg("bin.a")
+        .current_dir(workspace())
         .status()?;
+    if !status.success() {
+        return Err("qemu failed".into());
+    }
     Ok(())
 }
 
 fn clean() -> Result<()> {
-    Command::new(cargo())
+    let status = Command::new(cargo())
         .current_dir(workspace())
         .arg("clean")
         .status()?;
+    if !status.success() {
+        return Err("clean failed".into());
+    }
     Ok(())
 }
 
