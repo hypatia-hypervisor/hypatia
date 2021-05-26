@@ -1,18 +1,21 @@
+#![feature(allocator_api)]
 #![feature(asm)]
 #![feature(core_intrinsics)]
 #![feature(global_asm)]
 #![feature(lang_items)]
 #![feature(naked_functions)]
 #![feature(proc_macro_hygiene)]
+#![feature(default_alloc_error_handler)]
 #![cfg_attr(test, allow(dead_code))]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
+mod allocator;
 mod x86_64;
 
 #[cfg_attr(not(test), no_mangle)]
-pub extern "C" fn main() -> ! {
-    x86_64::init::start();
+pub extern "C" fn main(mbinfo_phys: u64) -> ! {
+    x86_64::init::start(mbinfo_phys);
     panic!("main: end reached");
 }
 

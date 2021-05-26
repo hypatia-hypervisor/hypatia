@@ -6,10 +6,11 @@ edition = "2018"
 
 [dependencies]
 bitflags = "*"
+multiboot = "*"
 seq-macro = "*"
 static_assertions = "*"
 zerocopy = "*"
-goblin = { version = "*", default-features = false, features = ["elf64"] }
+goblin = { version = "*", default-features = false, features = ["elf64", "elf32", "archive"] }
 arch = { path = "../arch" }
 uart = { path = "../uart" }
 libhypatia = { path = "../libhypatia" }
