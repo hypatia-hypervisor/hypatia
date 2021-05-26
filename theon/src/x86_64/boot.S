@@ -286,6 +286,7 @@ boot64:
 	movw	%ax, %fs
 	movw	%ax, %gs
 	movw	%ax, %ss
+	popq	%rdi			// Multiboot parameters
 	movabsq	$(bootstack + STACKSIZE), %rsp
 	movabsq	$1f, %rax
 	pushq	%rax
@@ -295,7 +296,6 @@ boot64:
 	movq	%rax, %cr3
 
 	// Call `main` in Rust code.
-	popq	%rdi			// Multiboot parameters
 	pushq	$0
 	movq	$0, %rbp
 	leaq	main(%rip), %rax
@@ -403,6 +403,7 @@ apgdtdesc:
 eapstart:
 
 PtX =		0 << 63
+PtNX =		1 << 63
 PtHUGE =	1 << 7
 PtW =		1 << 1
 PtR =		1 << 0
@@ -417,7 +418,8 @@ bootpgtbl:
 earlypgtbl:
 	.space	(4096/2)
 	.quad	(earlypt3 - KERNZERO) + PtX + PtW + PtR
-	.space	(4096/2) - (1*8)
+	.space	(4096/2) - (2*8)
+	.quad	(earlypgtbl - KERNZERO) + PtNX + PtW + PtR
 
 .align 4096
 earlypt3:
