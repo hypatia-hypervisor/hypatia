@@ -1,5 +1,5 @@
 /*
- * Copyright 2021  The Hypatia Hypervisor Authors
+ * Copyright 2021  The Hypatia Authors
  * All rights reserved
  *
  * Use of this source code is governed by an MIT-style

@@ -1,3 +1,10 @@
+// Copyright 2021  The Hypatia Authors
+// All rights reserved
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
 use multiboot::information::{MemoryManagement, Multiboot, PAddr};
 
 struct MM;
@@ -34,7 +41,7 @@ pub fn init(mbinfo_phys: u64) {
     let mb = unsafe { Multiboot::from_ptr(mbinfo_phys as PAddr, &mut mm).unwrap() };
     uart::panic_println!("end = {:016x}", unsafe { end.as_ptr() as usize });
     for module in mb.modules().unwrap() {
-        uart::panic_println!("{:x?}", module);
+        uart::panic_println!("{:#x?}", module);
         if Some("bin.a") == module.string {
             let len = (module.end - module.start) as usize;
             let bytes = unsafe { phys_to_slice(module.start, len).unwrap() };
@@ -43,6 +50,6 @@ pub fn init(mbinfo_phys: u64) {
         }
     }
     for module in mb.memory_regions().unwrap() {
-        uart::panic_println!("{:x?}", module);
+        uart::panic_println!("{:#x?}", module);
     }
 }
