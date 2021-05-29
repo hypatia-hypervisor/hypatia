@@ -92,7 +92,7 @@ fn parse_modules<'a>(mb: &'a Multiboot) -> Option<Vec<MultibootModule<'a>>> {
         mb.modules()?
             .map(|m| MultibootModule {
                 bytes: unsafe { phys_to_slice(m.start, (m.end - m.start) as usize).unwrap() },
-                name: m.string,
+                name: m.string.map(|name| name.split("/").last().unwrap()),
             })
             .collect(),
     )
@@ -107,10 +107,8 @@ pub fn init(mbinfo_phys: u64) {
         overlapping_regions.push(theon_region());
         for module in parse_modules(&mb).unwrap() {
             overlapping_regions.push(module.region());
-            // if Some("bin.a") == module.name {
-            //     let archive = goblin::archive::Archive::parse(module.bytes);
-            //     uart::panic_println!("archive: {:#x?}", archive);
-            // }
+            let archive = goblin::archive::Archive::parse(module.bytes);
+            uart::panic_println!("archive {:?}: {:#x?}", module.name, archive);
         }
         overlapping_regions.sort_by(|a, b| {
             use core::cmp::Ordering;
