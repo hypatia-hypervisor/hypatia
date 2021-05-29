@@ -52,6 +52,11 @@ fn main() {
             (@arg release: conflicts_with[debug] --release "Build a release version")
             (@arg debug: conflicts_with[release] --debug "Build a debug version")
         )
+        (@subcommand archive =>
+            (about: "Builds multibootable Hypatia images and packages them into an archive")
+            (@arg release: conflicts_with[debug] --release "Build a release version")
+            (@arg debug: conflicts_with[release] --debug "Build a debug version")
+        )
         (@subcommand test =>
             (about: "Builds multibootable Hypatia images")
             (@arg release: conflicts_with[debug] --release "Build a release version")
@@ -70,6 +75,7 @@ fn main() {
     if let Err(e) = match matches.subcommand() {
         ("build", Some(m)) => build(build_type(&m)),
         ("dist", Some(m)) => dist(build_type(&m)),
+        ("archive", Some(m)) => archive(build_type(&m)),
         ("test", Some(m)) => test(build_type(&m)),
         ("qemu", Some(m)) => qemu(build_type(&m)),
         ("clean", _) => clean(),
@@ -135,6 +141,32 @@ fn dist(profile: Build) -> Result<()> {
     Ok(())
 }
 
+const BINS: &[&str] = &[
+    "global",
+    "memory",
+    "monitor",
+    "scheduler",
+    "supervisor",
+    "trace",
+    "vcpu",
+    "vm",
+];
+
+fn archive(profile: Build) -> Result<()> {
+    dist(profile)?;
+    let _ = std::fs::remove_file(arname());
+    let mut a = ar::Builder::new(std::fs::File::create(arname())?);
+    for bin in BINS {
+        let filename = workspace()
+            .join("target")
+            .join(target())
+            .join(profile.dir())
+            .join(bin);
+        a.append_path(filename)?;
+    }
+    Ok(())
+}
+
 fn test(profile: Build) -> Result<()> {
     let mut cmd = Command::new(cargo());
     cmd.current_dir(workspace());
@@ -148,7 +180,7 @@ fn test(profile: Build) -> Result<()> {
 }
 
 fn qemu(profile: Build) -> Result<()> {
-    dist(profile)?;
+    archive(profile)?;
     let status = Command::new(qemu_system_x86_64())
         .arg("-nographic")
         .arg("-cpu")
@@ -156,7 +188,7 @@ fn qemu(profile: Build) -> Result<()> {
         .arg("-kernel")
         .arg(format!("target/{}/{}/theon.elf32", target(), profile.dir()))
         .arg("-initrd")
-        .arg("bin.a")
+        .arg(arname())
         .current_dir(workspace())
         .status()?;
     if !status.success() {
@@ -182,4 +214,8 @@ fn workspace() -> PathBuf {
         .nth(1)
         .unwrap()
         .to_path_buf()
+}
+
+fn arname() -> PathBuf {
+    workspace().join("target").join("bin.a")
 }
