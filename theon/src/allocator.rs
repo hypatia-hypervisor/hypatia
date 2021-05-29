@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-extern crate alloc;
 use alloc::alloc::{GlobalAlloc, Layout};
 use core::cell::Cell;
 

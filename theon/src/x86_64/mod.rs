@@ -7,4 +7,5 @@
 
 pub mod asm;
 pub mod init;
-mod multiboot1;
+pub mod memory;
+pub mod multiboot1;

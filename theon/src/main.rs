@@ -17,6 +17,8 @@
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
+extern crate alloc;
+
 mod allocator;
 mod x86_64;
 
