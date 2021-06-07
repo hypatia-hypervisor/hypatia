@@ -40,7 +40,7 @@ impl Uart {
 
     pub fn putb(&mut self, b: u8) {
         while !self.tx_ready() {
-            arch::cpu::pause();
+            arch::cpu::relax();
         }
         self.thr().send(b);
     }

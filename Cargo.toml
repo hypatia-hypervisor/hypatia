@@ -8,10 +8,8 @@
 [workspace]
 
 members = [
-    "arch",
     "devices",
     "global",
-    "libhypatia",
     "memory",
     "monitor",
     "scheduler",
@@ -21,5 +19,6 @@ members = [
     "uart",
     "vcpu",
     "vm",
+    "x86_64",
     "xtask",
 ]
