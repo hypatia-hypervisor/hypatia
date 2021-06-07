@@ -53,6 +53,14 @@ impl Entry {
         self.0.store(0, Ordering::Relaxed)
     }
 
+    pub fn enable(&self) {
+        self.0.fetch_or(EntryFlags::PRESENT.bits, Ordering::AcqRel);
+    }
+
+    pub fn disable(&self) {
+        self.0.fetch_and(!EntryFlags::PRESENT.bits, Ordering::AcqRel);
+    }
+
     pub fn pfn(&self) -> HPA {
         HPA(self.0.load(Ordering::Relaxed) & Self::PPN_MASK)
     }
