@@ -101,6 +101,11 @@ const PML3: usize = 0xFFFF_FFFF_FFE0_0000;
 const PML2: usize = 0xFFFF_FFFF_C000_0000;
 const PML1: usize = 0xFFFF_FF80_0000_0000;
 
+const SIDE_PML4: usize = 0xFFFF_FFFF_FFFF_E000;
+const SIDE_PML3: usize = 0xFFFF_FFFF_FFC0_0000;
+const SIDE_PML2: usize = 0xFFFF_FFFF_8000_0000;
+const SIDE_PML1: usize = 0xFFFF_FF00_0000_0000;
+
 const PPNX_MASK: usize = 0x1FF;
 
 pub enum Level4 {}
@@ -111,6 +116,7 @@ pub enum Level1 {}
 pub trait Node {
     fn index(va: usize) -> usize;
     fn entry(va: usize) -> &'static Entry;
+    fn side_entry(va: usize) -> &'static Entry;
 }
 
 impl Node for Level4 {
@@ -120,6 +126,11 @@ impl Node for Level4 {
 
     fn entry(va: usize) -> &'static Entry {
         let raw = PML4 + Self::index(va) * core::mem::size_of::<Entry>();
+        unsafe { &*(raw as *const Entry) }
+    }
+
+    fn side_entry(va: usize) -> &'static Entry {
+        let raw = SIDE_PML4 + Self::index(va) * core::mem::size_of::<Entry>();
         unsafe { &*(raw as *const Entry) }
     }
 }
@@ -133,6 +144,11 @@ impl Node for Level3 {
         let raw = PML3 + Self::index(va) * core::mem::size_of::<Entry>();
         unsafe { &*(raw as *const Entry) }
     }
+
+    fn side_entry(va: usize) -> &'static Entry {
+        let raw = SIDE_PML3 + Self::index(va) * core::mem::size_of::<Entry>();
+        unsafe { &*(raw as *const Entry) }
+    }
 }
 
 impl Node for Level2 {
@@ -144,6 +160,11 @@ impl Node for Level2 {
         let raw = PML2 + Self::index(va) * core::mem::size_of::<Entry>();
         unsafe { &*(raw as *const Entry) }
     }
+
+    fn side_entry(va: usize) -> &'static Entry {
+        let raw = SIDE_PML2 + Self::index(va) * core::mem::size_of::<Entry>();
+        unsafe { &*(raw as *const Entry) }
+    }
 }
 
 impl Node for Level1 {
@@ -153,6 +174,11 @@ impl Node for Level1 {
 
     fn entry(va: usize) -> &'static Entry {
         let raw = PML1 + Self::index(va) * core::mem::size_of::<Entry>();
+        unsafe { &*(raw as *const Entry) }
+    }
+
+    fn side_entry(va: usize) -> &'static Entry {
+        let raw = SIDE_PML1 + Self::index(va) * core::mem::size_of::<Entry>();
         unsafe { &*(raw as *const Entry) }
     }
 }
