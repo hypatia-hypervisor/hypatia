@@ -1,47 +1,54 @@
+.\" tbl mem.tbl | nroff -ms -Tascii | sed '/^$/d' > mem.txt
 .TS
 tab(,);
 | l | l.
 _,
 Recursive Page Table, -512 GiB
 _,
-Sideload Recursive PT, -1 TiB
+Nested Page Table, -1 TiB
+_,
+Sideload Recursive PT, -1 TiB - 512 GiB
+_,
+Sideload Nested Page Table, -2 TiB
 _,
 Global Area,
-, -2 TiB
-_,
-Monitor,
 , -3 TiB
 _,
-Trace Area,
+Monitor,
 , -4 TiB
 _,
-Per-CPU Area,
+Trace Area,
 , -5 TiB
+_,
+Per-CPU Area,
+, -6 TiB
 _,
 .T&
 c.
 \.
+\.
+(reserved)
 \.
 \.
 .T&
 | l | l.
 _,
 Supervisor,
-, -10 TiB
-_,
-Memory Manager,
 , -11 TiB
 _,
-Device Manager,
+Memory Manager,
 , -12 TiB
 _,
-Scheduler,
+Device Manager,
 , -13 TiB
 _,
-Task Set Area,
+Scheduler,
 , -14 TiB
 _,
-Task,
+Task Set Area,
 , -15 TiB
+_,
+Task,
+, -16 TiB
 _,
 .TE
