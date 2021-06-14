@@ -109,8 +109,8 @@ pub trait Node {
 
     fn index(va: usize) -> usize {
         const ADDRESS_BITS: usize = 48;
-        let index_mask: usize = (1 << (ADDRESS_BITS - Self::PAGE_SHIFT)) - 1;
-        (va >> Self::PAGE_SHIFT) & index_mask
+        const ADDRESS_MASK: usize = !(!0 << ADDRESS_BITS);
+        (va & ADDRESS_MASK) >> Self::PAGE_SHIFT
     }
 
     fn entry(va: usize) -> &'static Entry {
