@@ -181,3 +181,89 @@ where
 }
 
 pub type PageTable = Table<Level4>;
+
+#[cfg(test)]
+mod tests {
+    use super::Node;
+
+    #[test]
+    fn level4_index() {
+        use super::Level4;
+        assert_eq!(Level4::index(0x0000_0000_0000_0000), 0);
+        assert_eq!(Level4::index(0x0000_0000_0001_0000), 0);
+        assert_eq!(Level4::index(0x0000_0000_0020_0000), 0);
+        assert_eq!(Level4::index(0x0000_0000_4000_0000), 0);
+        assert_eq!(Level4::index(0x0000_0080_0000_0000), 1);
+        assert_eq!(Level4::index(0x0000_7FFF_FFFF_FFFF), 255);
+        assert_eq!(Level4::index(0xFFFF_8000_0000_0000), 256);
+        assert_eq!(Level4::index(0xFFFF_8000_0000_1000), 256);
+        assert_eq!(Level4::index(0xFFFF_8000_0020_0000), 256);
+        assert_eq!(Level4::index(0xFFFF_8000_4000_0000), 256);
+        assert_eq!(Level4::index(0xFFFF_8080_0000_0000), 257);
+        assert_eq!(Level4::index(Level4::PML_BASE), 511);
+        assert_eq!(Level4::index(Level4::SIDE_PML_BASE), 511);
+    }
+
+    #[test]
+    fn level3_index() {
+        use super::Level3;
+        const INDEX_BITS: usize = 18;
+        const UPPER: usize = 1 << INDEX_BITS;
+        const HALFWAY: usize = UPPER / 2;
+        assert_eq!(Level3::index(0x0000_0000_0000_0000), 0);
+        assert_eq!(Level3::index(0x0000_0000_0000_1000), 0);
+        assert_eq!(Level3::index(0x0000_0000_0020_0000), 0);
+        assert_eq!(Level3::index(0x0000_0000_4000_0000), 1);
+        assert_eq!(Level3::index(0x0000_0080_0000_0000), 512);
+        assert_eq!(Level3::index(0x0000_7FFF_FFFF_FFFF), HALFWAY - 1);
+        assert_eq!(Level3::index(0xFFFF_8000_0000_0000), HALFWAY);
+        assert_eq!(Level3::index(0xFFFF_8000_0000_1000), HALFWAY);
+        assert_eq!(Level3::index(0xFFFF_8000_0020_0000), HALFWAY);
+        assert_eq!(Level3::index(0xFFFF_8000_4000_0000), HALFWAY + 1);
+        assert_eq!(Level3::index(0xFFFF_8080_0000_0000), HALFWAY + 512);
+        assert_eq!(Level3::index(0xFFFF_FFFF_FFFF_F000), UPPER - 1);
+        assert_eq!(Level3::index(0xFFFF_FFFF_FFFF_E000), UPPER - 1);
+    }
+
+    #[test]
+    fn level2_index() {
+        use super::Level2;
+        const INDEX_BITS: usize = 27;
+        const UPPER: usize = 1 << INDEX_BITS;
+        const HALFWAY: usize = UPPER / 2;
+        assert_eq!(Level2::index(0x0000_0000_0000_0000), 0);
+        assert_eq!(Level2::index(0x0000_0000_0000_1000), 0);
+        assert_eq!(Level2::index(0x0000_0000_0020_0000), 1);
+        assert_eq!(Level2::index(0x0000_0000_4000_0000), 512);
+        assert_eq!(Level2::index(0x0000_0080_0000_0000), 512 * 512);
+        assert_eq!(Level2::index(0x0000_7FFF_FFFF_FFFF), HALFWAY - 1);
+        assert_eq!(Level2::index(0xFFFF_8000_0000_0000), HALFWAY);
+        assert_eq!(Level2::index(0xFFFF_8000_0000_1000), HALFWAY);
+        assert_eq!(Level2::index(0xFFFF_8000_0020_0000), HALFWAY + 1);
+        assert_eq!(Level2::index(0xFFFF_8000_4000_0000), HALFWAY + 512);
+        assert_eq!(Level2::index(0xFFFF_8080_0000_0000), HALFWAY + 512 * 512);
+        assert_eq!(Level2::index(0xFFFF_FFFF_FFFF_F000), UPPER - 1);
+        assert_eq!(Level2::index(0xFFFF_FFFF_FFFF_E000), UPPER - 1);
+    }
+
+    #[test]
+    fn level1_index() {
+        use super::Level1;
+        const INDEX_BITS: usize = 36;
+        const UPPER: usize = 1 << INDEX_BITS;
+        const HALFWAY: usize = UPPER / 2;
+        assert_eq!(Level1::index(0x0000_0000_0000_0000), 0);
+        assert_eq!(Level1::index(0x0000_0000_0000_1000), 1);
+        assert_eq!(Level1::index(0x0000_0000_0020_0000), 512);
+        assert_eq!(Level1::index(0x0000_0000_4000_0000), 512 * 512);
+        assert_eq!(Level1::index(0x0000_0080_0000_0000), 512 * 512 * 512);
+        assert_eq!(Level1::index(0x0000_7FFF_FFFF_FFFF), HALFWAY - 1);
+        assert_eq!(Level1::index(0xFFFF_8000_0000_0000), HALFWAY);
+        assert_eq!(Level1::index(0xFFFF_8000_0000_1000), HALFWAY + 1);
+        assert_eq!(Level1::index(0xFFFF_8000_0020_0000), HALFWAY + 512);
+        assert_eq!(Level1::index(0xFFFF_8000_4000_0000), HALFWAY + 512 * 512);
+        assert_eq!(Level1::index(0xFFFF_8080_0000_0000), HALFWAY + 512 * 512 * 512);
+        assert_eq!(Level1::index(0xFFFF_FFFF_FFFF_F000), UPPER - 1);
+        assert_eq!(Level1::index(0xFFFF_FFFF_FFFF_E000), UPPER - 2);
+    }
+}
