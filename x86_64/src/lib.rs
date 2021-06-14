@@ -33,17 +33,48 @@ pub struct Page([u8; PAGE_SIZE]);
 ///
 /// A newtype representing a host physical address.
 ///
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct HPA(u64);
 
 impl HPA {
     /// Creates a new HPA from a u64.
-    pub fn new(addr: u64) -> HPA {
+    pub const fn new(addr: u64) -> HPA {
         HPA(addr)
     }
 
     /// Returns the address of this HPA as a u64.
-    pub fn address(self) -> u64 {
+    pub const fn address(self) -> u64 {
         self.0
+    }
+}
+
+/// Host Page Frame Number
+///
+/// A newtype representing a host page frame number.
+/// Internally, this is represented as an integer,
+/// instead of the base address.
+#[derive(Clone, Copy, Debug)]
+pub struct HPFN(usize);
+
+impl HPFN {
+    pub const fn new(addr: HPA) -> HPFN {
+        HPFN(addr.address() as usize / PAGE_SIZE)
+    }
+
+    pub fn hpa(self) -> HPA {
+        HPA::new((self.0 * PAGE_SIZE) as u64)
+    }
+}
+
+impl From<HPA> for HPFN {
+    fn from(addr: HPA) -> HPFN {
+        HPFN::new(addr)
+    }
+}
+
+impl From<HPFN> for HPA {
+    fn from(hpfn: HPFN) -> HPA {
+        hpfn.hpa()
     }
 }

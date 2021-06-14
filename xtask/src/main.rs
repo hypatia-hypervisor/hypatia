@@ -73,11 +73,11 @@ fn main() {
     )
     .get_matches();
     if let Err(e) = match matches.subcommand() {
-        ("build", Some(m)) => build(build_type(&m)),
-        ("dist", Some(m)) => dist(build_type(&m)),
-        ("archive", Some(m)) => archive(build_type(&m)),
-        ("test", Some(m)) => test(build_type(&m)),
-        ("qemu", Some(m)) => qemu(build_type(&m)),
+        ("build", Some(m)) => build(build_type(m)),
+        ("dist", Some(m)) => dist(build_type(m)),
+        ("archive", Some(m)) => archive(build_type(m)),
+        ("test", Some(m)) => test(build_type(m)),
+        ("qemu", Some(m)) => qemu(build_type(m)),
         ("clean", _) => clean(),
         _ => Err("bad subcommand".into()),
     } {
@@ -141,27 +141,15 @@ fn dist(profile: Build) -> Result<()> {
     Ok(())
 }
 
-const BINS: &[&str] = &[
-    "global",
-    "memory",
-    "monitor",
-    "scheduler",
-    "supervisor",
-    "trace",
-    "vcpu",
-    "vm",
-];
+const BINS: &[&str] =
+    &["global", "memory", "monitor", "scheduler", "supervisor", "trace", "vcpu", "vm"];
 
 fn archive(profile: Build) -> Result<()> {
     dist(profile)?;
     let _ = std::fs::remove_file(arname());
     let mut a = ar::Builder::new(std::fs::File::create(arname())?);
     for bin in BINS {
-        let filename = workspace()
-            .join("target")
-            .join(target())
-            .join(profile.dir())
-            .join(bin);
+        let filename = workspace().join("target").join(target()).join(profile.dir()).join(bin);
         a.append_path(filename)?;
     }
     Ok(())
@@ -198,10 +186,7 @@ fn qemu(profile: Build) -> Result<()> {
 }
 
 fn clean() -> Result<()> {
-    let status = Command::new(cargo())
-        .current_dir(workspace())
-        .arg("clean")
-        .status()?;
+    let status = Command::new(cargo()).current_dir(workspace()).arg("clean").status()?;
     if !status.success() {
         return Err("clean failed".into());
     }
@@ -209,11 +194,7 @@ fn clean() -> Result<()> {
 }
 
 fn workspace() -> PathBuf {
-    Path::new(&env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(1)
-        .unwrap()
-        .to_path_buf()
+    Path::new(&env!("CARGO_MANIFEST_DIR")).ancestors().nth(1).unwrap().to_path_buf()
 }
 
 fn arname() -> PathBuf {

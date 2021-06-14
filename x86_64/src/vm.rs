@@ -96,17 +96,6 @@ impl Clone for Entry {
 /// adajenct in the virtual mapping for the radix nodes, which
 /// is a very useful property.
 ///
-const PML4: usize = 0xFFFF_FFFF_FFFF_F000;
-const PML3: usize = 0xFFFF_FFFF_FFE0_0000;
-const PML2: usize = 0xFFFF_FFFF_C000_0000;
-const PML1: usize = 0xFFFF_FF80_0000_0000;
-
-const SIDE_PML4: usize = 0xFFFF_FFFF_FFFF_E000;
-const SIDE_PML3: usize = 0xFFFF_FFFF_FFC0_0000;
-const SIDE_PML2: usize = 0xFFFF_FFFF_8000_0000;
-const SIDE_PML1: usize = 0xFFFF_FF00_0000_0000;
-
-const PPNX_MASK: usize = 0x1FF;
 
 pub enum Level4 {}
 pub enum Level3 {}
@@ -114,73 +103,47 @@ pub enum Level2 {}
 pub enum Level1 {}
 
 pub trait Node {
-    fn index(va: usize) -> usize;
-    fn entry(va: usize) -> &'static Entry;
-    fn side_entry(va: usize) -> &'static Entry;
+    const PML_BASE: usize;
+    const SIDE_PML_BASE: usize;
+    const PAGE_SHIFT: usize;
+
+    fn index(va: usize) -> usize {
+        const ADDRESS_BITS: usize = 48;
+        let index_mask: usize = (1 << (ADDRESS_BITS - Self::PAGE_SHIFT)) - 1;
+        (va >> Self::PAGE_SHIFT) & index_mask
+    }
+
+    fn entry(va: usize) -> &'static Entry {
+        unsafe { &*(Self::PML_BASE as *const Entry).add(Self::index(va)) }
+    }
+
+    fn side_entry(va: usize) -> &'static Entry {
+        unsafe { &*(Self::SIDE_PML_BASE as *const Entry).add(Self::index(va)) }
+    }
 }
 
 impl Node for Level4 {
-    fn index(va: usize) -> usize {
-        (va >> 39) & PPNX_MASK
-    }
-
-    fn entry(va: usize) -> &'static Entry {
-        let raw = PML4 + Self::index(va) * core::mem::size_of::<Entry>();
-        unsafe { &*(raw as *const Entry) }
-    }
-
-    fn side_entry(va: usize) -> &'static Entry {
-        let raw = SIDE_PML4 + Self::index(va) * core::mem::size_of::<Entry>();
-        unsafe { &*(raw as *const Entry) }
-    }
+    const PML_BASE: usize = 0xFFFF_FFFF_FFFF_F000;
+    const SIDE_PML_BASE: usize = 0xFFFF_FFFF_FFFF_E000;
+    const PAGE_SHIFT: usize = 39;
 }
 
 impl Node for Level3 {
-    fn index(va: usize) -> usize {
-        (va >> 30) & PPNX_MASK
-    }
-
-    fn entry(va: usize) -> &'static Entry {
-        let raw = PML3 + Self::index(va) * core::mem::size_of::<Entry>();
-        unsafe { &*(raw as *const Entry) }
-    }
-
-    fn side_entry(va: usize) -> &'static Entry {
-        let raw = SIDE_PML3 + Self::index(va) * core::mem::size_of::<Entry>();
-        unsafe { &*(raw as *const Entry) }
-    }
+    const PML_BASE: usize = 0xFFFF_FFFF_FFE0_0000;
+    const SIDE_PML_BASE: usize = 0xFFFF_FFFF_FFC0_0000;
+    const PAGE_SHIFT: usize = 30;
 }
 
 impl Node for Level2 {
-    fn index(va: usize) -> usize {
-        (va >> 21) & PPNX_MASK
-    }
-
-    fn entry(va: usize) -> &'static Entry {
-        let raw = PML2 + Self::index(va) * core::mem::size_of::<Entry>();
-        unsafe { &*(raw as *const Entry) }
-    }
-
-    fn side_entry(va: usize) -> &'static Entry {
-        let raw = SIDE_PML2 + Self::index(va) * core::mem::size_of::<Entry>();
-        unsafe { &*(raw as *const Entry) }
-    }
+    const PML_BASE: usize = 0xFFFF_FFFF_C000_0000;
+    const SIDE_PML_BASE: usize = 0xFFFF_FFFF_8000_0000;
+    const PAGE_SHIFT: usize = 21;
 }
 
 impl Node for Level1 {
-    fn index(va: usize) -> usize {
-        (va >> 12) & PPNX_MASK
-    }
-
-    fn entry(va: usize) -> &'static Entry {
-        let raw = PML1 + Self::index(va) * core::mem::size_of::<Entry>();
-        unsafe { &*(raw as *const Entry) }
-    }
-
-    fn side_entry(va: usize) -> &'static Entry {
-        let raw = SIDE_PML1 + Self::index(va) * core::mem::size_of::<Entry>();
-        unsafe { &*(raw as *const Entry) }
-    }
+    const PML_BASE: usize = 0xFFFF_FF80_0000_0000;
+    const SIDE_PML_BASE: usize = 0xFFFF_FF00_0000_0000;
+    const PAGE_SHIFT: usize = 12;
 }
 
 pub trait Level: Node {
@@ -216,3 +179,5 @@ where
         self.entries.iter().all(|entry| entry.is_zero())
     }
 }
+
+pub type PageTable = Table<Level4>;
