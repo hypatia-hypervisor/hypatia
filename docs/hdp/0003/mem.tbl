@@ -34,15 +34,21 @@ c.
 | l | l.
 _,
 Supervisor,
-, -11 TiB
+, -9 TiB
 _,
 Memory Manager,
-, -12 TiB
+, -10 TiB
 _,
 Device Manager,
-, -13 TiB
+, -11 TiB
 _,
 Scheduler,
+, -12 TiB
+_,
+Task Set Upgrade Area,
+, -13 TiB
+_,
+Task Upgrade Area,
 , -14 TiB
 _,
 Task Set Area,

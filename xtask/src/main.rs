@@ -141,8 +141,18 @@ fn dist(profile: Build) -> Result<()> {
     Ok(())
 }
 
-const BINS: &[&str] =
-    &["global", "memory", "monitor", "scheduler", "supervisor", "trace", "vcpu", "vm"];
+const BINS: &[&str] = &[
+    "devices",
+    "global",
+    "memory",
+    "monitor",
+    "scheduler",
+    "supervisor",
+    "system",
+    "trace",
+    "vcpu",
+    "vm",
+];
 
 fn archive(profile: Build) -> Result<()> {
     dist(profile)?;

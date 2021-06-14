@@ -14,6 +14,7 @@ members = [
     "monitor",
     "scheduler",
     "supervisor",
+    "system",
     "theon",
     "trace",
     "uart",
