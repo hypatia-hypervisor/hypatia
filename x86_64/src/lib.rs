@@ -26,11 +26,11 @@ pub mod vm;
 /// Everything in the host virtual address space
 /// in Hypatia is mapped using 4KiB pages.
 
-pub const PAGE_SIZE: usize = 4096;
-
-#[repr(C, align(4096))]
-#[derive(FromBytes)]
-pub struct Page([u8; PAGE_SIZE]);
+/// Useful constants for sizes.
+pub const TIB: usize = 1 << 40;
+pub const GIB: usize = 1 << 30;
+pub const MIB: usize = 1 << 20;
+pub const KIB: usize = 1 << 10;
 
 /// Host Physical Address
 ///
@@ -50,34 +50,63 @@ impl HPA {
     pub const fn address(self) -> u64 {
         self.0
     }
-}
 
-/// Host Page Frame Number
-///
-/// A newtype representing a host page frame number.
-/// Internally, this is represented as an integer,
-/// instead of the base address.
-#[derive(Clone, Copy, Debug)]
-pub struct HPFN(usize);
-
-impl HPFN {
-    pub const fn new(addr: HPA) -> HPFN {
-        HPFN(addr.address() as usize / PAGE_SIZE)
-    }
-
-    pub fn hpa(self) -> HPA {
-        HPA::new((self.0 * PAGE_SIZE) as u64)
+    pub const fn offset(self, offset: u64) -> HPA {
+        HPA::new(self.0 + offset as u64)
     }
 }
 
-impl From<HPA> for HPFN {
-    fn from(addr: HPA) -> HPFN {
-        HPFN::new(addr)
-    }
+/// Page
+pub trait Page {
+    type FrameType: PageFrame;
+    const SIZE: usize;
+    const ALIGN: usize = Self::SIZE;
+    const MASK: usize = Self::SIZE - 1;
 }
 
-impl From<HPFN> for HPA {
-    fn from(hpfn: HPFN) -> HPA {
-        hpfn.hpa()
-    }
+#[repr(C, align(4096))]
+#[derive(FromBytes)]
+pub struct Page4K([u8; 4 * KIB]);
+impl Page for Page4K {
+    const SIZE: usize = core::mem::size_of::<Self>();
+    type FrameType = PF4K;
+}
+
+#[repr(C, align(2097152))]
+pub struct Page2M([u8; 2 * MIB]);
+impl Page for Page2M {
+    const SIZE: usize = core::mem::size_of::<Self>();
+    type FrameType = PF2M;
+}
+
+/// XXX(cross): Rust does not support 1GiB alignment.
+// #[repr(C, align(1073741824))]
+#[allow(clippy::identity_op)]
+#[repr(C)]
+pub struct Page1G([u8; 1 * GIB]);
+impl Page for Page1G {
+    const SIZE: usize = core::mem::size_of::<Self>();
+    type FrameType = PF1G;
+}
+
+pub trait PageFrame {
+    type PageType: Page;
+}
+
+#[repr(transparent)]
+pub struct PF1G(HPA);
+impl PageFrame for PF1G {
+    type PageType = Page1G;
+}
+
+#[repr(transparent)]
+pub struct PF2M(HPA);
+impl PageFrame for PF2M {
+    type PageType = Page2M;
+}
+
+#[repr(transparent)]
+pub struct PF4K(HPA);
+impl PageFrame for PF4K {
+    type PageType = Page4K;
 }
