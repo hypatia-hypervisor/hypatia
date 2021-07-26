@@ -9,13 +9,13 @@
 ///
 /// Hypatia uses recursive page tables with side-loading for
 /// address space inspection and manipulation.
-use crate::HPA;
+use crate::{Page, PageFrame, HPA, PF1G, PF2M, PF4K};
 use bitflags::bitflags;
-use core::marker::PhantomData;
+//use core::marker::PhantomData;    // XXX(cross): Not yet.
 use core::sync::atomic::{AtomicU64, Ordering};
 
 bitflags! {
-    pub struct EntryFlags: u64 {
+    pub struct PTEFlags: u64 {
         const PRESENT = 1;
         const WRITE   = 1 << 1;
         const USER    = 1 << 2;
@@ -32,61 +32,127 @@ bitflags! {
 ///
 /// Page table entries are 64-bit integers, but we must be
 /// careful when accessing them, so we define them in terms
-/// of atomics numbers.
+/// of atomics.
 ///
 #[repr(transparent)]
-#[derive(Debug)]
-pub struct Entry(AtomicU64);
+pub struct PTE(AtomicU64);
 
-impl Entry {
-    const PPN_MASK: u64 = 0x0000_7FFF_FFFF_F000;
+impl PTE {
+    const PFA_MASK: u64 = 0x0000_7FFF_FFFF_F000;
 
-    pub fn new(hpa: HPA) -> Entry {
-        Entry(AtomicU64::new(hpa.address()))
+    /// Creates a new PTE from the given HPA and flags.
+    ///
+    /// TODO(cross): Extend this to be generic over the
+    /// physical frame types defined in lib.rs.
+    pub fn new(hpa: HPA, flags: PTEFlags) -> PTE {
+        let address = hpa.address() & Self::PFA_MASK;
+        assert_eq!(hpa.address(), address);
+        PTE(AtomicU64::new(address | flags.bits()))
     }
 
-    pub const fn empty() -> Entry {
-        Entry(AtomicU64::new(0))
+    /// Creates an empty (zero) PTE.
+    pub const fn empty() -> PTE {
+        PTE(AtomicU64::new(0))
     }
 
+    /// Zeroes out the PTE.
     pub fn clear(&self) {
         self.0.store(0, Ordering::Relaxed)
     }
 
+    /// Sets the "PRESENT" bit in the PTE.
     pub fn enable(&self) {
-        self.0.fetch_or(EntryFlags::PRESENT.bits, Ordering::AcqRel);
+        self.0.fetch_or(PTEFlags::PRESENT.bits, Ordering::AcqRel);
     }
 
+    /// Clears the present bit in the PTE, disabling access to the region
+    /// it describes.
     pub fn disable(&self) {
-        self.0.fetch_and(!EntryFlags::PRESENT.bits, Ordering::AcqRel);
+        self.0.fetch_and(!PTEFlags::PRESENT.bits, Ordering::AcqRel);
     }
 
-    pub fn pfn(&self) -> HPA {
-        HPA(self.0.load(Ordering::Relaxed) & Self::PPN_MASK)
+    /// Returns the physical frame address associated with the PTE.
+    pub fn pfa(&self) -> HPA {
+        HPA(self.0.load(Ordering::Relaxed) & Self::PFA_MASK)
     }
 
-    pub fn flags(&self) -> EntryFlags {
-        EntryFlags::from_bits_truncate(self.0.load(Ordering::Relaxed))
+    /// Extracts and returns the flags attached to this PTE.
+    pub fn flags(&self) -> PTEFlags {
+        PTEFlags::from_bits_truncate(self.0.load(Ordering::Relaxed))
     }
 
+    /// Returns true iff the PTE is marked "PRESENT".
     pub fn is_present(&self) -> bool {
-        self.flags().contains(EntryFlags::PRESENT)
+        self.flags().contains(PTEFlags::PRESENT)
     }
 
+    /// Returns true iff the bit marking this either a huge or large page is set.
+    pub fn is_big(&self) -> bool {
+        self.flags().contains(PTEFlags::HUGE)
+    }
+
+    /// Returns true iff the entry is zero.
     pub fn is_zero(&self) -> bool {
         self.0.load(Ordering::Relaxed) == 0
     }
 }
 
-impl Clone for Entry {
-    fn clone(&self) -> Entry {
-        Entry(AtomicU64::new(self.0.load(Ordering::Relaxed)))
+impl Clone for PTE {
+    fn clone(&self) -> PTE {
+        PTE(AtomicU64::new(self.0.load(Ordering::Relaxed)))
     }
 }
 
+impl core::fmt::Debug for PTE {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let flags = self.flags();
+        let flag_or = |f: PTEFlags, a, b| {
+            if flags.contains(f) {
+                a
+            } else {
+                b
+            }
+        };
+        f.write_str(flag_or(PTEFlags::NX, "-", "X"))?;
+        f.write_fmt(format_args!(":{:#x?}:", self.pfa().address()))?;
+        f.write_str(flag_or(PTEFlags::GLOBAL, "G", "-"))?;
+        f.write_str(flag_or(PTEFlags::HUGE, "H", "-"))?;
+        f.write_str(flag_or(PTEFlags::DIRTY, "D", "-"))?;
+        f.write_str(flag_or(PTEFlags::ACCESS, "A", "-"))?;
+        f.write_str(flag_or(PTEFlags::NOCACHE, "C̶", "-"))?;
+        f.write_str(flag_or(PTEFlags::USER, "U", "-"))?;
+        f.write_str(flag_or(PTEFlags::WRITE, "W", "-"))?;
+        f.write_str(flag_or(PTEFlags::PRESENT, "R", "-"))
+    }
+}
+
+pub trait Entry {}
+
+pub enum L4E {
+    Next(PTE),
+}
+impl Entry for L4E {}
+
+pub enum L3E {
+    Next(PTE),
+    Page(PF1G),
+}
+impl Entry for L3E {}
+
+pub enum L2E {
+    Next(PTE),
+    Page(PF2M),
+}
+impl Entry for L2E {}
+
+pub enum L1E {
+    Page(PF4K),
+}
+impl Entry for L1E {}
+
 ///
 /// The nature of the recursive entry in the table root is that
-/// the nodes in the paging radix trees are all accessable via
+/// the nodes in the paging radix trees are all accessible via
 /// fixed locations in the virtual address space.  The constants
 /// below are the beginnings of the virtual address regions for
 /// all entries.
@@ -96,95 +162,252 @@ impl Clone for Entry {
 /// adajenct in the virtual mapping for the radix nodes, which
 /// is a very useful property.
 ///
+pub trait Level {
+    type EntryType: Entry;
+    const BASE_ADDRESS: usize;
+    const SIDE_BASE_ADDRESS: usize;
+    const PAGE_SHIFT: usize;
+
+    fn index(va: usize) -> usize {
+        const WORD_SIZE: usize = 64;
+        const ADDRESS_BITS: usize = 48;
+        const SIGN_EXTENSION_BITS: usize = WORD_SIZE - ADDRESS_BITS;
+        const ADDRESS_MASK: usize = !0 >> SIGN_EXTENSION_BITS;
+        (va & ADDRESS_MASK) >> Self::PAGE_SHIFT
+    }
+
+    fn decode(pte: PTE) -> Option<Self::EntryType>;
+
+    fn pte_ref<T>(p: *const T) -> &'static PTE {
+        let va = p as usize;
+        unsafe { &*(Self::BASE_ADDRESS as *const PTE).add(Self::index(va)) }
+    }
+
+    fn entry<T>(p: *const T) -> Option<Self::EntryType> {
+        let pte = Self::pte_ref(p).clone();
+        Self::decode(pte)
+    }
+
+    /// # Safety
+    ///
+    /// This is not safe.  It requires that some address space is side-loaded
+    /// before calling.
+    unsafe fn side_pte_ref(va: usize) -> &'static PTE {
+        &*(Self::SIDE_BASE_ADDRESS as *const PTE).add(Self::index(va))
+    }
+
+    /// # Safety
+    ///
+    /// This is not safe.  It requires that some address space is side-loaded
+    /// before calling.
+    unsafe fn side_entry(va: usize) -> Option<Self::EntryType> {
+        let pte = Self::side_pte_ref(va).clone();
+        Self::decode(pte)
+    }
+}
 
 pub enum Level4 {}
 pub enum Level3 {}
 pub enum Level2 {}
 pub enum Level1 {}
 
-pub trait Node {
-    const PML_BASE: usize;
-    const SIDE_PML_BASE: usize;
-    const PAGE_SHIFT: usize;
-
-    fn index(va: usize) -> usize {
-        const ADDRESS_BITS: usize = 48;
-        const ADDRESS_MASK: usize = !(!0 << ADDRESS_BITS);
-        (va & ADDRESS_MASK) >> Self::PAGE_SHIFT
-    }
-
-    fn entry(va: usize) -> &'static Entry {
-        unsafe { &*(Self::PML_BASE as *const Entry).add(Self::index(va)) }
-    }
-
-    fn side_entry(va: usize) -> &'static Entry {
-        unsafe { &*(Self::SIDE_PML_BASE as *const Entry).add(Self::index(va)) }
-    }
-}
-
-impl Node for Level4 {
-    const PML_BASE: usize = 0xFFFF_FFFF_FFFF_F000;
-    const SIDE_PML_BASE: usize = 0xFFFF_FFFF_FFFF_E000;
-    const PAGE_SHIFT: usize = 39;
-}
-
-impl Node for Level3 {
-    const PML_BASE: usize = 0xFFFF_FFFF_FFE0_0000;
-    const SIDE_PML_BASE: usize = 0xFFFF_FFFF_FFC0_0000;
-    const PAGE_SHIFT: usize = 30;
-}
-
-impl Node for Level2 {
-    const PML_BASE: usize = 0xFFFF_FFFF_C000_0000;
-    const SIDE_PML_BASE: usize = 0xFFFF_FFFF_8000_0000;
-    const PAGE_SHIFT: usize = 21;
-}
-
-impl Node for Level1 {
-    const PML_BASE: usize = 0xFFFF_FF80_0000_0000;
-    const SIDE_PML_BASE: usize = 0xFFFF_FF00_0000_0000;
-    const PAGE_SHIFT: usize = 12;
-}
-
-pub trait Level: Node {
-    type EntryType: Node;
-}
-
 impl Level for Level4 {
-    type EntryType = Level3;
+    type EntryType = L4E;
+    const BASE_ADDRESS: usize = 0xFFFF_FFFF_FFFF_F000;
+    const SIDE_BASE_ADDRESS: usize = 0xFFFF_FFFF_FFFF_E000;
+    const PAGE_SHIFT: usize = 39;
+
+    fn decode(pte: PTE) -> Option<Self::EntryType> {
+        if pte.is_present() {
+            Some(L4E::Next(pte))
+        } else {
+            None
+        }
+    }
 }
 
 impl Level for Level3 {
-    type EntryType = Level2;
-}
+    type EntryType = L3E;
+    const BASE_ADDRESS: usize = 0xFFFF_FFFF_FFE0_0000;
+    const SIDE_BASE_ADDRESS: usize = 0xFFFF_FFFF_FFC0_0000;
+    const PAGE_SHIFT: usize = 30;
 
-impl Level for Level2 {
-    type EntryType = Level1;
-}
-
-#[repr(C, align(4096))]
-pub struct Table<L>
-where
-    L: Node,
-{
-    entries: [Entry; 512],
-    level: PhantomData<L>,
-}
-
-impl<L> Table<L>
-where
-    L: Level,
-{
-    pub fn is_empty(&self) -> bool {
-        self.entries.iter().all(|entry| entry.is_zero())
+    fn decode(pte: PTE) -> Option<Self::EntryType> {
+        if !pte.is_present() {
+            None
+        } else if pte.is_big() {
+            Some(L3E::Page(PF1G(pte.pfa())))
+        } else {
+            Some(L3E::Next(pte))
+        }
     }
 }
 
-pub type PageTable = Table<Level4>;
+impl Level for Level2 {
+    type EntryType = L2E;
+    const BASE_ADDRESS: usize = 0xFFFF_FFFF_C000_0000;
+    const SIDE_BASE_ADDRESS: usize = 0xFFFF_FFFF_8000_0000;
+    const PAGE_SHIFT: usize = 21;
+
+    fn decode(pte: PTE) -> Option<Self::EntryType> {
+        if !pte.is_present() {
+            None
+        } else if pte.is_big() {
+            Some(L2E::Page(PF2M(pte.pfa())))
+        } else {
+            Some(L2E::Next(pte))
+        }
+    }
+}
+
+impl Level for Level1 {
+    type EntryType = L1E;
+    const BASE_ADDRESS: usize = 0xFFFF_FF80_0000_0000;
+    const SIDE_BASE_ADDRESS: usize = 0xFFFF_FF00_0000_0000;
+    const PAGE_SHIFT: usize = 12;
+
+    fn decode(pte: PTE) -> Option<Self::EntryType> {
+        if !pte.is_present() {
+            None
+        } else {
+            Some(L1E::Page(PF4K(pte.pfa())))
+        }
+    }
+}
+
+#[repr(C, align(4096))]
+pub struct PageTable {
+    entries: [PTE; 512],
+}
+
+impl PageTable {
+    pub fn is_empty(&self) -> bool {
+        self.entries.iter().all(|entry| entry.is_zero())
+    }
+
+    pub fn root_address(&self) -> HPA {
+        translate(self)
+    }
+}
+
+/// A walk represents a path of page table entries from the root
+/// down to the leaf level of paging radix tree.
+struct Walk(Option<L4E>, Option<L3E>, Option<L2E>, Option<L1E>);
+
+/// Performs a page table walk for the virtual address of the given
+/// pointer in the current address space.
+fn walk<T>(p: *const T) -> Walk {
+    let pt4e = Level4::entry(p);
+    match pt4e {
+        Some(L4E::Next(_)) => {}
+        _ => return Walk(pt4e, None, None, None),
+    }
+
+    let pt3e = Level3::entry(p);
+    match pt3e {
+        Some(L3E::Next(_)) => {}
+        _ => return Walk(pt4e, pt3e, None, None),
+    }
+
+    let pt2e = Level2::entry(p);
+    match pt2e {
+        Some(L2E::Next(_)) => {}
+        _ => return Walk(pt4e, pt3e, pt2e, None),
+    }
+
+    let pt1e = Level1::entry(p);
+
+    Walk(pt4e, pt3e, pt2e, pt1e)
+}
+
+/// Translates the virtual address of the given pointer in the current
+/// namespace to a host physical address.
+pub fn translate<T>(p: *const T) -> HPA {
+    let va = p as usize;
+    match walk(p) {
+        Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Next(_)), Some(L1E::Page(PF4K(hpa)))) => {
+            hpa.offset((va & <PF4K as PageFrame>::PageType::MASK) as u64)
+        }
+        Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Page(PF2M(hpa))), _) => {
+            hpa.offset((va & <PF2M as PageFrame>::PageType::MASK) as u64)
+        }
+        Walk(Some(_), Some(L3E::Page(PF1G(hpa))), _, _) => {
+            hpa.offset((va & <PF1G as PageFrame>::PageType::MASK) as u64)
+        }
+        Walk(_, _, _, _) => HPA::new(0),
+    }
+}
+
+/// Perform a walk against a side-loaded page table.
+///
+/// # Safety
+///
+/// This is not safe.  The caller must ensure that a side-loaded
+/// page table is loaded, and that the TLB is free of stale entries
+/// for any other side-loaded address space before calling this.
+///
+/// XXX(cross): We should figure out some way to at least improve
+/// safety here.
+unsafe fn side_walk(va: usize) -> Walk {
+    let pt4e = Level4::side_entry(va);
+    match pt4e {
+        Some(_) => {}
+        _ => return Walk(pt4e, None, None, None),
+    }
+
+    let pt3e = Level3::side_entry(va);
+    match pt3e {
+        Some(L3E::Next(_)) => {}
+        _ => return Walk(pt4e, pt3e, None, None),
+    }
+
+    let pt2e = Level2::side_entry(va);
+    match pt2e {
+        Some(L2E::Next(_)) => {}
+        _ => return Walk(pt4e, pt3e, pt2e, None),
+    }
+
+    let pt1e = Level1::side_entry(va);
+
+    Walk(pt4e, pt3e, pt2e, pt1e)
+}
+
+/// Translate a given virtual address into a host physical
+/// address against the currently side-loaded page table.
+///
+/// # Safety
+///
+/// This is not safe.  The caller must ensure that a side-loaded
+/// page table is loaded, and that the TLB is free of stale entries
+/// for any other side-loaded address space before calling this.
+///
+/// XXX(cross): We should figure out some way to at least improve
+/// safety here.
+pub unsafe fn side_translate(va: usize) -> HPA {
+    match side_walk(va) {
+        Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Next(_)), Some(L1E::Page(PF4K(hpa)))) => {
+            hpa.offset((va & <PF4K as PageFrame>::PageType::MASK) as u64)
+        }
+        Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Page(PF2M(hpa))), _) => {
+            hpa.offset((va & <PF2M as PageFrame>::PageType::MASK) as u64)
+        }
+        Walk(Some(_), Some(L3E::Page(PF1G(hpa))), _, _) => {
+            hpa.offset((va & <PF1G as PageFrame>::PageType::MASK) as u64)
+        }
+        Walk(_, _, _, _) => HPA::new(0),
+    }
+}
+
+/// Returns the host physical address of the address space root for
+/// the currently loaded address space.
+pub fn address_space_root() -> HPA {
+    let table = unsafe { &*(Level4::BASE_ADDRESS as *const PageTable) };
+    table.root_address()
+}
 
 #[cfg(test)]
 mod tests {
-    use super::Node;
+    use super::Level;
 
     #[test]
     fn level4_index() {
@@ -200,8 +423,8 @@ mod tests {
         assert_eq!(Level4::index(0xFFFF_8000_0020_0000), 256);
         assert_eq!(Level4::index(0xFFFF_8000_4000_0000), 256);
         assert_eq!(Level4::index(0xFFFF_8080_0000_0000), 257);
-        assert_eq!(Level4::index(Level4::PML_BASE), 511);
-        assert_eq!(Level4::index(Level4::SIDE_PML_BASE), 511);
+        assert_eq!(Level4::index(Level4::BASE_ADDRESS), 511);
+        assert_eq!(Level4::index(Level4::SIDE_BASE_ADDRESS), 511);
     }
 
     #[test]
@@ -265,5 +488,16 @@ mod tests {
         assert_eq!(Level1::index(0xFFFF_8080_0000_0000), HALFWAY + 512 * 512 * 512);
         assert_eq!(Level1::index(0xFFFF_FFFF_FFFF_F000), UPPER - 1);
         assert_eq!(Level1::index(0xFFFF_FFFF_FFFF_E000), UPPER - 2);
+    }
+
+    #[test]
+    fn pte_debug() {
+        use super::{PTEFlags as F, HPA, PTE};
+
+        let pte = PTE::new(HPA::new(0xabc000), F::NX | F::USER | F::WRITE | F::PRESENT);
+        assert_eq!(format!("{:?}", pte), "-:0xabc000:-----UWR");
+
+        let pte = PTE::new(HPA::new(0xfff000), F::NOCACHE | F::USER | F::WRITE | F::PRESENT);
+        assert_eq!(format!("{:?}", pte), "X:0xfff000:----C̶UWR");
     }
 }
