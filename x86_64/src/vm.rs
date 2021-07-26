@@ -35,14 +35,13 @@ bitflags! {
 /// of atomics numbers.
 ///
 #[repr(transparent)]
-#[derive(Debug)]
 pub struct Entry(AtomicU64);
 
 impl Entry {
-    const PPN_MASK: u64 = 0x0000_7FFF_FFFF_F000;
+    const PPA_MASK: u64 = 0x0000_7FFF_FFFF_F000;
 
-    pub fn new(hpa: HPA) -> Entry {
-        Entry(AtomicU64::new(hpa.address()))
+    pub fn new(hpa: HPA, flags: EntryFlags) -> Entry {
+        Entry(AtomicU64::new(hpa.address() | flags.bits()))
     }
 
     pub const fn empty() -> Entry {
@@ -61,8 +60,8 @@ impl Entry {
         self.0.fetch_and(!EntryFlags::PRESENT.bits, Ordering::AcqRel);
     }
 
-    pub fn pfn(&self) -> HPA {
-        HPA(self.0.load(Ordering::Relaxed) & Self::PPN_MASK)
+    pub fn ppa(&self) -> HPA {
+        HPA(self.0.load(Ordering::Relaxed) & Self::PPA_MASK)
     }
 
     pub fn flags(&self) -> EntryFlags {
@@ -75,6 +74,29 @@ impl Entry {
 
     pub fn is_zero(&self) -> bool {
         self.0.load(Ordering::Relaxed) == 0
+    }
+}
+
+impl core::fmt::Debug for Entry {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let flags = self.flags();
+        let flag_or = |f: EntryFlags, a, b| {
+            if flags.contains(f) {
+                a
+            } else {
+                b
+            }
+        };
+        f.write_str(flag_or(EntryFlags::NX, "-", "X"))?;
+        f.write_fmt(format_args!(":{:#x?}:", self.ppa().address()))?;
+        f.write_str(flag_or(EntryFlags::GLOBAL, "G", "-"))?;
+        f.write_str(flag_or(EntryFlags::HUGE, "H", "-"))?;
+        f.write_str(flag_or(EntryFlags::DIRTY, "D", "-"))?;
+        f.write_str(flag_or(EntryFlags::ACCESS, "A", "-"))?;
+        f.write_str(flag_or(EntryFlags::NOCACHE, "C̶", "-"))?;
+        f.write_str(flag_or(EntryFlags::USER, "U", "-"))?;
+        f.write_str(flag_or(EntryFlags::WRITE, "W", "-"))?;
+        f.write_str(flag_or(EntryFlags::PRESENT, "R", "-"))
     }
 }
 
@@ -182,6 +204,28 @@ where
 
 pub type PageTable = Table<Level4>;
 
+pub struct Walk {
+    pub pml4: Option<Entry>,
+    pub pml3: Option<Entry>,
+    pub pml2: Option<Entry>,
+    pub pml1: Option<Entry>,
+}
+
+impl PageTable {
+    pub fn root_address(&self) -> HPA {
+        self.entries[511].ppa()
+    }
+
+    pub fn walk(&self, address: usize) -> Walk {
+        Walk { pml4: None, pml3: None, pml2: None, pml1: None }
+    }
+}
+
+pub fn address_space_root() -> HPA {
+    let table = unsafe { &*(Level4::PML_BASE as *const PageTable) };
+    table.root_address()
+}
+
 #[cfg(test)]
 mod tests {
     use super::Node;
@@ -265,5 +309,16 @@ mod tests {
         assert_eq!(Level1::index(0xFFFF_8080_0000_0000), HALFWAY + 512 * 512 * 512);
         assert_eq!(Level1::index(0xFFFF_FFFF_FFFF_F000), UPPER - 1);
         assert_eq!(Level1::index(0xFFFF_FFFF_FFFF_E000), UPPER - 2);
+    }
+
+    #[test]
+    fn entry_debug() {
+        use super::{Entry, EntryFlags as F, HPA};
+
+        let entry = Entry::new(HPA::new(0xabc000), F::NX | F::USER | F::WRITE | F::PRESENT);
+        assert_eq!(format!("{:?}", entry), "-:0xabc000:-----UWR");
+
+        let entry = Entry::new(HPA::new(0xfff000), F::NOCACHE | F::USER | F::WRITE | F::PRESENT);
+        assert_eq!(format!("{:?}", entry), "X:0xfff000:----C̶UWR");
     }
 }

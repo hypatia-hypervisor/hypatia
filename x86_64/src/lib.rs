@@ -51,33 +51,3 @@ impl HPA {
         self.0
     }
 }
-
-/// Host Page Frame Number
-///
-/// A newtype representing a host page frame number.
-/// Internally, this is represented as an integer,
-/// instead of the base address.
-#[derive(Clone, Copy, Debug)]
-pub struct HPFN(usize);
-
-impl HPFN {
-    pub const fn new(addr: HPA) -> HPFN {
-        HPFN(addr.address() as usize / PAGE_SIZE)
-    }
-
-    pub fn hpa(self) -> HPA {
-        HPA::new((self.0 * PAGE_SIZE) as u64)
-    }
-}
-
-impl From<HPA> for HPFN {
-    fn from(addr: HPA) -> HPFN {
-        HPFN::new(addr)
-    }
-}
-
-impl From<HPFN> for HPA {
-    fn from(hpfn: HPFN) -> HPA {
-        hpfn.hpa()
-    }
-}
