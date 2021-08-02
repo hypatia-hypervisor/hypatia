@@ -1,8 +1,2 @@
-[unstable]
-extra-link-arg = true
-#build-std = ["core", "alloc"]
-
 [alias]
 xtask = "run --package xtask --"
-
-[target.x86_64-unknown-none-elf]
