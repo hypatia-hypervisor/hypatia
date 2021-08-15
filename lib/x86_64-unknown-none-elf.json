@@ -10,7 +10,6 @@
 	"os": "none",
 	"executables": true,
 	"disable-redzone": true,
-	"eliminate-frame-pointer": false,
 	"features": "-mmx,-sse,+soft-float",
 	"panic-strategy": "abort",
 	"pre-link-args": {

@@ -67,6 +67,11 @@ fn main() {
             (@arg release: conflicts_with[debug] --release "Build a release version")
             (@arg debug: conflicts_with[release] --debug "Build a debug version")
         )
+        (@subcommand qemukvm =>
+            (about: "Boot Theon under QEMU with KVM")
+            (@arg release: conflicts_with[debug] --release "Build a release version")
+            (@arg debug: conflicts_with[release] --debug "Build a debug version")
+        )
         (@subcommand clean =>
             (about: "Cargo clean")
         )
@@ -78,6 +83,7 @@ fn main() {
         ("archive", Some(m)) => archive(build_type(m)),
         ("test", Some(m)) => test(build_type(m)),
         ("qemu", Some(m)) => qemu(build_type(m)),
+        ("qemukvm", Some(m)) => qemukvm(build_type(m)),
         ("clean", _) => clean(),
         _ => Err("bad subcommand".into()),
     } {
@@ -181,6 +187,26 @@ fn qemu(profile: Build) -> Result<()> {
     archive(profile)?;
     let status = Command::new(qemu_system_x86_64())
         .arg("-nographic")
+        .arg("-cpu")
+        .arg("kvm64,+rdtscp,+pdpe1gb,+fsgsbase,+x2apic")
+        .arg("-kernel")
+        .arg(format!("target/{}/{}/theon.elf32", target(), profile.dir()))
+        .arg("-initrd")
+        .arg(arname())
+        .current_dir(workspace())
+        .status()?;
+    if !status.success() {
+        return Err("qemu failed".into());
+    }
+    Ok(())
+}
+
+fn qemukvm(profile: Build) -> Result<()> {
+    archive(profile)?;
+    let status = Command::new(qemu_system_x86_64())
+        .arg("-nographic")
+        .arg("-accel")
+        .arg("kvm")
         .arg("-cpu")
         .arg("kvm64,+rdtscp,+pdpe1gb,+fsgsbase,+x2apic")
         .arg("-kernel")
