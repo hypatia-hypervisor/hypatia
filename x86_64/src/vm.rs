@@ -85,11 +85,11 @@ impl Clone for Entry {
 }
 
 ///
-/// The nature of the recursive entry in the PML4 is that the
-/// nodes in the paging radix trees are all accessable via fixed
-/// locations in the virtual address space.  The constants below
-/// are the beginnings of the virtual address regions for all
-/// entries.
+/// The nature of the recursive entry in the table root is that
+/// the nodes in the paging radix trees are all accessable via
+/// fixed locations in the virtual address space.  The constants
+/// below are the beginnings of the virtual address regions for
+/// all entries.
 ///
 /// This also means that radix nodes at any given level of the
 /// tree for contiguous regions of the virtual address space are
