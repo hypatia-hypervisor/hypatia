@@ -16,6 +16,8 @@ SECTIONS {
 	{
 		*(.text.boot)
 		*(.text*)
+		. = ALIGN(4096);
+		*(.trap*)
 	}
 	. = ALIGN(4096);
 	PROVIDE(etext = .);
