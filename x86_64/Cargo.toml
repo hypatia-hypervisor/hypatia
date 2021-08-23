@@ -14,5 +14,7 @@ edition = "2018"
 
 [dependencies]
 bitflags = "*"
+bitstruct = "*"
+seq-macro = "*"
 x86 = "*"
 zerocopy = "*"

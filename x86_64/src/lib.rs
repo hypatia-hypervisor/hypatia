@@ -5,12 +5,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
+#![feature(asm)]
+#![feature(naked_functions)]
 #![cfg_attr(not(test), no_std)]
 
 use zerocopy::FromBytes;
 
 pub mod cpu;
 pub mod io;
+pub mod trap;
 pub mod vm;
 
 ///
