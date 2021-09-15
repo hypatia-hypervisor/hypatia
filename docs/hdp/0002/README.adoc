@@ -1,6 +1,6 @@
 :state: Needed
 :date: 2021-05-07
-:labels: design, 
+:labels: design,
 
 Terms and Definitions
 =====================
@@ -10,24 +10,67 @@ terms and definitions throughout Hypatia.  This is the
 repository of such terms.
 
 Hypervisor::
-The combination of kernel and userspace
+The combination of kernel and userspace components that permit
+execution of a virtual machine on hardware.
 
 Hyperkernel::
-The bare-metal kernel that runs directly on the host.
-It owns and allocates the hardware, and provides services
-to virtual machines.
+The bare-metal kernel that runs directly on the host.  It owns
+and allocates the hardware, and provides services to virtual
+machines.
 
 Virtual Machine Monitor (VMM)::
-The userspace portion of the hypervisor.  Note that in
-Hypatia, this typically runs the a root VM.
+The userspace portion of the hypervisor.  Note that in Hypatia,
+this typically runs in the root VM.
 
 Virtual Machine (VM)::
-An instance of a virtual machine that runs under the
-hypervisor.
+An instance of a virtual machine that runs under the hypervisor.
 
 Root VM::
-A specially privileged virtual machine, designed to run
-the control plane.
+A specially privileged virtual machine, designed to run the
+control plane and VMM for guest VMs.
+
+Guest VM::
+A VM that provides general service on behalf of a customer; it
+is not especially privileged and not involved in running the
+system.
+
+Customer VM::
+Another term for Guest VM.
 
 Control plane::
-The control software that directs the 
+The control software that directs the hypervisor and manages
+resource allocation, runs device drivers, etc.
+
+Driver VM::
+A special class of VM provided to run a device driver and
+provide services to the hypervisor, but not provide general
+computation.
+
+Segment::
+A segment is a region of shared virtual memory that contains
+code and data that provide some useful function to the rest of
+the system.  Inter-segment linkage is performed by means of
+transfer vectors.
+
+Task::
+A unit of organization in the hypervisor.  Tasks are roughly
+analogous to threads, but live in individual address spaces.  In
+that sense, they are similar to processes, but are cooperatively
+scheduled.  There is a limited, highly controlled, taxonomy of
+tasks: VCPUs, VM control tasks and the system task.  Note that
+tasks can be grouped into Task Sets.
+
+Task Set::
+An organizational grouping of tasks.  Each task set consists of
+one or more tasks and exactly one leader.  A task set logically
+groups related tasks, and members can view parts of the leader's
+address space.  The canonical example is a virtual machine: a
+"VM" is a task set consisting of the control task and VCPU
+tasks.
+
+Transfer Vector::
+A transfer vector is a jump table at some well-known location
+relative to the start of a segment.  That is, it is a table
+indexed by a function identifier that points to executable code
+within a segment.  One may think of it as an array of function
+pointers.

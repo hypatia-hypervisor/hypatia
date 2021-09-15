@@ -5,15 +5,51 @@
 Overall System Architecture
 ===========================
 
-Hypatia is structured as a set of cooperating
-tasks that run in their own address spaces.  Related
-tasks are grouped together into a task set.  Tasks
-can request services from ever-present components.
+Hypatia is structured as a set of cooperating tasks and
+segments.  Tasks run in their own address spaces and related
+tasks are grouped together into a task set.  Segments are fixed
+and shared between tasks, and may be mapped on demand. Tasks can
+call into segments.
 
 Tasks
 -----
+A task is the basic unit of scheduling in Hypatia; it is
+conceptually similar to a thread, but exists in its own address
+space.  In this sense, it is similar to a process, but tasks are
+cooperatively scheduled by explicit calls into a scheduler
+segment.
+
+The set of tasks is small and all tasks are written in such a
+way that we assert they cannot maliciously (or inadvertently)
+starve the rest of the system for resources.
+
 vcpu::
-A task type that runs a VCPU on behalf a virtual machine
+A task type that runs a VCPU on behalf a virtual machine.
 
 vmctl::
-A virtual machine control task
+A virtual machine control task that provides general control
+services on behalf of a virtual machine.
+
+Task Sets
+---------
+Tasks are grouped into a task set, which is a set of cooperating
+tasks.  Task sets can have one or more members, but always have
+exactly one leader.  Each task is in exactly one task set, and
+tasks cannot move to other, pre-existing task sets.  However, a
+task can request creation of a new task set and start a new task
+running in that task set; the first task running in a task set
+is automatically the task set leader.
+
+Segments
+--------
+A segment is a fixed, shared region of virtual address space
+that can be mapped into a task address space and contains text
+and data that provide services to a task.
+
+Privilege and State Flushing
+----------------------------
+A segment is either privileged or not; privileged segments are
+not ordinarily mapped into the address space of tasks.  Calling
+into a privileged segment "taints" the tasks, so whatever CPU it
+is running on must stun any hyperthread buddies and ensure
+cache flushes before returning to unprivileged code.
