@@ -93,10 +93,11 @@ startboot:
 	// Give ourselves a stack
 	movl	$(bootstack - KERNZERO + STACKSIZE), %esp
 
-	// Save multiboot parameters (in %eax and %ebx) on stack.
-	// We'll restore %eax as a parameter to `main()` when we
-	// get into 64-bit mode, so push a 0 for the high 32-bits
-	// when we pop.
+	// Save multiboot parameters (in %ebx) on stack.
+	// We'll restore the physical address of the multiboot
+	// information structures (in %ebx) as a parameter to
+	// `main()` when we get into 64-bit mode, so push a 0
+	// for the high 32-bits when we pop.
 	pushl	$0
 	pushl	%ebx
 	pushl	%eax
@@ -205,11 +206,20 @@ startboot:
 	jmp	earlypanic
 1:
 	// If we've gotten this far, the system supports the features
-	// that we need to run.  There's probably more we should check.
+	// that we need to run.  There's probably more we should check
+	// about the hardware.
 
+	// Check whether the GDT is in the first 16MiB of physical
+	// address space for later AP startup.
+	movl	$(gdt - KERNZERO), %edx
+	cmpl	$((16 * (1 << 20)) - 32), %edx
+	jle	1f
+	movl	$(EGDTTooFarAway - KERNZERO), %edi
+	jmp	earlypanic
+1:
 	// Enable long mode, no-execute support, and SCE
 	movl	$IA32_MSR_EFER, %ecx
-	movl	$(EferSCE + EferLME + EferNX), %eax
+	movl	$(EferSCE | EferLME | EferNX), %eax
 	xorl	%edx, %edx
 	wrmsr
 
@@ -219,8 +229,8 @@ startboot:
 	andl	$~Cr4PSE, %eax
 	movl	%eax, %cr4
 
-	// Put our early double mapping in place to jump to high
-	// addresses.
+	// Put our early double mapping in place for the jump to
+	// high addresses.
 	movl	$(bootpgtbl - KERNZERO), %eax
 	movl	%eax, %cr3
 
@@ -279,20 +289,24 @@ ENoGigPages:	.asciz "\"earlypanic\": \"No gigabyte page support\""
 ENoNX:		.asciz "\"earlypanic\": \"No non-executable page support\""
 ENoX2APIC:	.asciz "\"earlypanic\": \"No x2APIC mode support\""
 ENoFSGSBase:	.asciz "\"earlypanic\": \"No (RD|WR)(FS|GS)BASE support\""
-EFakePanic:	.asciz "\"earlypanic\": \"Fake panic!\r\n\""
+EGDTTooFarAway:	.asciz "\"earlypanic\": \"GDT Descriptor is beyond 16MiB\""
 
 .code64
 .align 64
 boot64:
+	// Load the high-mapped GDT.
 	movabsq	$gdtdescv, %rax
 	lgdt	(%rax)
 
+	// Zero out the segmentation registers; we won't touch them
+	// from here on out.
 	xorl	%eax, %eax
 	movw	%ax, %ds
 	movw	%ax, %es
 	movw	%ax, %fs
 	movw	%ax, %gs
 	movw	%ax, %ss
+
 	popq	%rdi			// Multiboot parameters
 	movabsq	$(bootstack + STACKSIZE), %rsp
 	movabsq	$1f, %rax
@@ -326,26 +340,34 @@ apstart:
 	cld
 	wbinvd
 
-	lgdtl	(APENTRY + (apgdtdesc - apstart))
+	lgdt	(APENTRY + (gdtdesc - apstart))
 
 	movl	%cr0, %eax
 	orl	$Cr0PE, %eax
 	movl	%eax, %cr0
 
-	ljmpl   $GdtCODE32, $(APENTRY + (1f - apstart))
+	ljmpl	$GdtCODE32, $(1f - KERNZERO)
+
+.align 16
+.skip 6
+gdtdesc:
+	.word	egdt - gdt - 1
+	.long	(gdt - KERNZERO)
+
+eapstart:
 
 .code32
 1:
-	movw    $GdtDATA32, %ax
-	movw    %ax, %ds
-	movw    %ax, %ss
-	movw    %ax, %es
-	xorw    %ax, %ax
-	movw    %ax, %fs
-	movw    %ax, %gs
+	movw	$GdtDATA32, %ax
+	movw	%ax, %ds
+	movw	%ax, %ss
+	movw	%ax, %es
+	xorw	%ax, %ax
+	movw	%ax, %fs
+	movw	%ax, %gs
 
 	movl	$IA32_MSR_EFER, %ecx
-	movl	$(EferSCE + EferLME + EferNX), %eax
+	movl	$(EferSCE | EferLME | EferNX), %eax
 	xorl	%edx, %edx
 	wrmsr
 
@@ -362,7 +384,7 @@ apstart:
 	andl	$~(Cr0MP | Cr0TS | Cr0NW | Cr0CD), %eax
 	movl	%eax, %cr0
 
-	ljmp	$GdtCODE64, $(APENTRY + (1f - apstart))
+	ljmp	$GdtCODE64, $(1f - KERNZERO)
 
 .code64
 1:
@@ -395,19 +417,18 @@ gdt:
 	// 0: Null segment
 	.quad	0
 	// 8: Kernel 64-bit code segment
-	.quad	(SegREAD + SegCODE + SegALWAYS1 + SegPRESENT + SegLONG)
+	.quad	(SegREAD | SegCODE | SegALWAYS1 | SegPRESENT | SegLONG)
 	// 16: Kernel 32-bit code segment (for bootstrapping APs)
-	.quad	(SegREAD + SegCODE + SegALWAYS1 + SegPRESENT + Seg32DEF)
+	.quad	(SegREAD | SegCODE | SegALWAYS1 | SegPRESENT | Seg32DEF)
 	// 24: Kernel 32-bit data segment (for bootstrapping APs)
-	.quad	(SegREAD + SegWRITE + SegALWAYS1 + SegPRESENT + Seg32DEF)
+	.quad	(SegREAD | SegWRITE | SegALWAYS1 | SegPRESENT | Seg32DEF)
 egdt:
 
+.align 16
 .skip 6
-apgdtdesc:
+gdtdescv:
 	.word	egdt - gdt - 1
-	.long	(APENTRY + gdt - apstart)
-
-eapstart:
+	.quad	gdt
 
 PtX =		0 << 63
 PtNX =		1 << 63
@@ -417,36 +438,24 @@ PtR =		1 << 0
 
 .align 4096
 bootpgtbl:
-	.quad	(earlypt3 - KERNZERO) + PtX + PtW + PtR
+	.quad	(earlypt3 - KERNZERO) + (PtX | PtW | PtR)
 	.space	(4096/2) - (1*8)
-	.quad	(earlypt3 - KERNZERO) + PtX + PtW + PtR
+	.quad	(earlypt3 - KERNZERO) + (PtX | PtW | PtR)
 	.space	(4096/2) - (1*8)
 
 earlypgtbl:
 	.space	(4096/2)
-	.quad	(earlypt3 - KERNZERO) + PtX + PtW + PtR
+	.quad	(earlypt3 - KERNZERO) + (PtX | PtW | PtR)
 	.space	(4096/2) - (2*8)
-	.quad	(earlypgtbl - KERNZERO) + PtNX + PtW + PtR
+	.quad	(earlypgtbl - KERNZERO) + (PtNX | PtW | PtR)
 
 .align 4096
 earlypt3:
-	.quad	(0<<30) + PtHUGE + PtX + PtW + PtR
-	.quad	(1<<30) + PtHUGE + PtX + PtW + PtR
-	.quad	(2<<30) + PtHUGE + PtX + PtW + PtR
-	.quad	(3<<30) + PtHUGE + PtX + PtW + PtR
+	.quad	(0<<30) + (PtHUGE | PtX | PtW | PtR)
+	.quad	(1<<30) + (PtHUGE | PtX | PtW | PtR)
+	.quad	(2<<30) + (PtHUGE | PtX | PtW | PtR)
+	.quad	(3<<30) + (PtHUGE | PtX | PtW | PtR)
 	.space	4096 - (4*8)
-
-.align 16
-.skip 6
-gdtdesc:
-	.word	egdt - gdt - 1
-	.long	(gdt - KERNZERO)
-
-.align 16
-.skip 6
-gdtdescv:
-	.word	egdt - gdt - 1
-	.quad	gdt
 
 .bss
 .align 4096
