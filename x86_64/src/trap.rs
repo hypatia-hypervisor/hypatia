@@ -101,7 +101,6 @@ pub unsafe extern "C" fn stubs() -> ! {
 }
 
 #[link_section = ".trap"]
-#[no_mangle]
 #[naked]
 pub unsafe extern "C" fn trap() -> ! {
     asm!(r#"
