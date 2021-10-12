@@ -14,6 +14,8 @@ use bitflags::bitflags;
 //use core::marker::PhantomData;    // XXX(cross): Not yet.
 use core::sync::atomic::{AtomicU64, Ordering};
 
+pub type Result<T> = core::result::Result<T, &'static str>;
+
 bitflags! {
     pub struct PTEFlags: u64 {
         const PRESENT = 1;
@@ -69,6 +71,11 @@ impl PTE {
     /// it describes.
     pub fn disable(&self) {
         self.0.fetch_and(!PTEFlags::PRESENT.bits, Ordering::AcqRel);
+    }
+
+    /// Assign self the value of the given PTE.
+    pub fn assign(&self, pte: PTE) {
+        self.0.store(pte.0.into_inner(), Ordering::Relaxed);
     }
 
     /// Returns the physical frame address associated with the PTE.
@@ -178,14 +185,18 @@ pub trait Level {
 
     fn decode(pte: PTE) -> Option<Self::EntryType>;
 
-    fn pte_ref<T>(p: *const T) -> &'static PTE {
-        let va = p as usize;
+    fn pte_ref(va: usize) -> &'static PTE {
         unsafe { &*(Self::BASE_ADDRESS as *const PTE).add(Self::index(va)) }
     }
 
-    fn entry<T>(p: *const T) -> Option<Self::EntryType> {
-        let pte = Self::pte_ref(p).clone();
+    fn entry(va: usize) -> Option<Self::EntryType> {
+        let pte = Self::pte_ref(va).clone();
         Self::decode(pte)
+    }
+
+    fn set_entry(va: usize, pte: PTE) {
+        let entry = Self::pte_ref(va);
+        entry.assign(pte);
     }
 
     /// # Safety
@@ -203,6 +214,15 @@ pub trait Level {
     unsafe fn side_entry(va: usize) -> Option<Self::EntryType> {
         let pte = Self::side_pte_ref(va).clone();
         Self::decode(pte)
+    }
+
+    /// # Safety
+    ///
+    /// This is not safe.  It requires that some address space is side-loaded
+    /// before calling.
+    unsafe fn set_side_entry(va: usize, pte: PTE) {
+        let entry = Self::side_pte_ref(va);
+        entry.assign(pte);
     }
 }
 
@@ -286,7 +306,7 @@ impl PageTable {
     }
 
     pub fn root_address(&self) -> HPA {
-        translate(self)
+        translate_ptr(self)
     }
 }
 
@@ -296,35 +316,42 @@ struct Walk(Option<L4E>, Option<L3E>, Option<L2E>, Option<L1E>);
 
 /// Performs a page table walk for the virtual address of the given
 /// pointer in the current address space.
-fn walk<T>(p: *const T) -> Walk {
-    let pt4e = Level4::entry(p);
+fn walk_ptr<T>(p: *const T) -> Walk {
+    walk(p as usize)
+}
+
+fn walk(va: usize) -> Walk {
+    let pt4e = Level4::entry(va);
     match pt4e {
         Some(L4E::Next(_)) => {}
         _ => return Walk(pt4e, None, None, None),
     }
 
-    let pt3e = Level3::entry(p);
+    let pt3e = Level3::entry(va);
     match pt3e {
         Some(L3E::Next(_)) => {}
         _ => return Walk(pt4e, pt3e, None, None),
     }
 
-    let pt2e = Level2::entry(p);
+    let pt2e = Level2::entry(va);
     match pt2e {
         Some(L2E::Next(_)) => {}
         _ => return Walk(pt4e, pt3e, pt2e, None),
     }
 
-    let pt1e = Level1::entry(p);
+    let pt1e = Level1::entry(va);
 
     Walk(pt4e, pt3e, pt2e, pt1e)
 }
 
 /// Translates the virtual address of the given pointer in the current
-/// namespace to a host physical address.
-pub fn translate<T>(p: *const T) -> HPA {
-    let va = p as usize;
-    match walk(p) {
+/// address space to a host physical address.
+pub fn translate_ptr<T>(p: *const T) -> HPA {
+    translate(p as usize)
+}
+
+pub fn translate(va: usize) -> HPA {
+    match walk(va) {
         Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Next(_)), Some(L1E::Page(PF4K(hpa)))) => {
             hpa.offset((va & <PF4K as PageFrame>::PageType::MASK) as u64)
         }
@@ -335,6 +362,36 @@ pub fn translate<T>(p: *const T) -> HPA {
             hpa.offset((va & <PF1G as PageFrame>::PageType::MASK) as u64)
         }
         Walk(_, _, _, _) => HPA::new(0),
+    }
+}
+
+/// Maps the given PF4K to the given virtual address in the current
+/// address space.
+pub fn map<F>(hpf: PF4K, flags: PTEFlags, va: usize, mut allocator: F) -> Result<()>
+where
+    F: FnMut() -> Result<PF4K>,
+{
+    assert_eq!(va & <PF4K as PageFrame>::PageType::MASK, 0);
+    let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
+
+    let w = walk(va);
+    if let Walk(None, _, _, _) = w {
+        let pml4e = allocator()?;
+        Level4::set_entry(va, PTE::new(pml4e.pfa(), inner_flags));
+    }
+    if let Walk(_, None, _, _) = w {
+        let pml3e = allocator()?;
+        Level3::set_entry(va, PTE::new(pml3e.pfa(), inner_flags));
+    }
+    if let Walk(_, _, None, _) = w {
+        let pml2e = allocator()?;
+        Level2::set_entry(va, PTE::new(pml2e.pfa(), inner_flags));
+    }
+    if let Walk(_, _, _, None) = w {
+        Level1::set_entry(va, PTE::new(hpf.pfa(), flags));
+        Ok(())
+    } else {
+        Err("Already mapped")
     }
 }
 
@@ -395,6 +452,36 @@ pub unsafe fn side_translate(va: usize) -> HPA {
             hpa.offset((va & <PF1G as PageFrame>::PageType::MASK) as u64)
         }
         Walk(_, _, _, _) => HPA::new(0),
+    }
+}
+
+/// Maps the given PF4K to the given virtual address in the currently
+/// side-loaded address space.
+pub unsafe fn side_map<F>(hpf: PF4K, flags: PTEFlags, va: usize, mut allocator: F) -> Result<()>
+where
+    F: FnMut() -> Result<PF4K>,
+{
+    assert_eq!(va & <PF4K as PageFrame>::PageType::MASK, 0);
+    let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
+
+    let w = side_walk(va);
+    if let Walk(None, _, _, _) = w {
+        let pml4e = allocator()?;
+        Level4::set_side_entry(va, PTE::new(pml4e.pfa(), inner_flags));
+    }
+    if let Walk(_, None, _, _) = w {
+        let pml3e = allocator()?;
+        Level3::set_side_entry(va, PTE::new(pml3e.pfa(), inner_flags));
+    }
+    if let Walk(_, _, None, _) = w {
+        let pml2e = allocator()?;
+        Level2::set_side_entry(va, PTE::new(pml2e.pfa(), inner_flags));
+    }
+    if let Walk(_, _, _, None) = w {
+        Level1::set_side_entry(va, PTE::new(hpf.pfa(), flags));
+        Ok(())
+    } else {
+        Err("Already mapped")
     }
 }
 
