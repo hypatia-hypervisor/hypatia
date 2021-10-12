@@ -107,6 +107,12 @@ impl PageFrame for PF2M {
 
 #[repr(transparent)]
 pub struct PF4K(HPA);
+impl PF4K {
+    pub fn pfa(self) -> HPA {
+        self.0
+    }
+}
+
 impl PageFrame for PF4K {
     type PageType = Page4K;
 }
