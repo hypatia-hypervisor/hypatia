@@ -9,7 +9,7 @@
 name = "theon"
 version = "0.1.0"
 authors = ["Dan Cross <cross@oxide.computer>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 bitflags = "*"
