@@ -9,7 +9,7 @@
 ///
 /// Hypatia uses recursive page tables with side-loading for
 /// address space inspection and manipulation.
-use crate::{Page, PageFrame, HPA, PF1G, PF2M, PF4K};
+use crate::{Page, PageFrame, VPageAddr, HPA, PF1G, PF2M, PF4K, V4KA};
 use bitflags::bitflags;
 //use core::marker::PhantomData;    // XXX(cross): Not yet.
 use core::sync::atomic::{AtomicU64, Ordering};
@@ -316,6 +316,7 @@ struct Walk(Option<L4E>, Option<L3E>, Option<L2E>, Option<L1E>);
 
 /// Performs a page table walk for the virtual address of the given
 /// pointer in the current address space.
+#[allow(dead_code)]
 fn walk_ptr<T>(p: *const T) -> Walk {
     walk(p as usize)
 }
@@ -367,11 +368,11 @@ pub fn translate(va: usize) -> HPA {
 
 /// Maps the given PF4K to the given virtual address in the current
 /// address space.
-pub fn map<F>(hpf: PF4K, flags: PTEFlags, va: usize, mut allocator: F) -> Result<()>
+pub fn map<F>(hpf: PF4K, flags: PTEFlags, va: V4KA, mut allocator: F) -> Result<()>
 where
     F: FnMut() -> Result<PF4K>,
 {
-    assert_eq!(va & <PF4K as PageFrame>::PageType::MASK, 0);
+    let va = va.address();
     let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
 
     let w = walk(va);
@@ -457,11 +458,11 @@ pub unsafe fn side_translate(va: usize) -> HPA {
 
 /// Maps the given PF4K to the given virtual address in the currently
 /// side-loaded address space.
-pub unsafe fn side_map<F>(hpf: PF4K, flags: PTEFlags, va: usize, mut allocator: F) -> Result<()>
+pub unsafe fn side_map<F>(hpf: PF4K, flags: PTEFlags, va: V4KA, mut allocator: F) -> Result<()>
 where
     F: FnMut() -> Result<PF4K>,
 {
-    assert_eq!(va & <PF4K as PageFrame>::PageType::MASK, 0);
+    let va = va.address();
     let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
 
     let w = side_walk(va);
