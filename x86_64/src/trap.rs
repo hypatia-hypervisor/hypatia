@@ -51,11 +51,11 @@ const TRAPFRAME_VECTOR_OFFSET: usize = 0x98;
 const TRAPFRAME_CS_OFFSET: usize = 0xB0;
 
 macro_rules! gen_stub {
-    ($vecnum:expr) => {
-        concat!(r#".balign 8; pushq $0; callq {trap}; .byte "#, stringify!($vecnum), ";")
+    ($vecnum:literal) => {
+        concat!(r#".balign 8; pushq $0; callq {trap}; .byte "#, $vecnum, ";")
     };
-    ($vecnum:expr, err) => {
-        concat!(r#".balign 8; callq {trap}; .byte "#, stringify!($vecnum), ";")
+    ($vecnum:literal, err) => {
+        concat!(r#".balign 8; callq {trap}; .byte "#, $vecnum, ";")
     };
 }
 
@@ -104,34 +104,46 @@ pub unsafe extern "C" fn stubs() -> ! {
 #[naked]
 pub unsafe extern "C" fn trap() -> ! {
     asm!(r#"
+        // Allocate space to save registers.
+        subq $((4 + 15) * 8), %rsp
         // Save the x86 segmentation registers.
-        subq $32, %rsp
-        movq $0, (%rsp);
-        movw %ds, (%rsp);
-        movq $0, 8(%rsp);
-        movw %es, 8(%rsp);
-        movq $0, 16(%rsp);
-        movw %fs, 16(%rsp);
-        movq $0, 24(%rsp);
-        movw %gs, 24(%rsp);
-        pushq %r15;
-        pushq %r14;
-        pushq %r13;
-        pushq %r12;
-        pushq %r11;
-        pushq %r10;
-        pushq %r9;
-        pushq %r8;
-        pushq %rbp;
-        pushq %rdi;
-        pushq %rsi;
-        pushq %rdx;
-        pushq %rcx;
-        pushq %rbx;
-        pushq %rax;
+        movq $0, 18*8(%rsp);
+        movw %gs, 18*8(%rsp);
+        movq $0, 17*8(%rsp);
+        movw %fs, 17*8(%rsp);
+        movq $0, 16*8(%rsp);
+        movw %es, 16*8(%rsp);
+        movq $0, 15*8(%rsp);
+        movw %ds, 15*8(%rsp);
+        // Save the general purpose registers.
+        movq %r15, 14*8(%rsp);
+        movq %r14, 13*8(%rsp);
+        movq %r13, 12*8(%rsp);
+        movq %r12, 11*8(%rsp);
+        movq %r11, 10*8(%rsp);
+        movq %r10, 9*8(%rsp);
+        movq %r9, 8*8(%rsp);
+        movq %r8, 7*8(%rsp);
+        movq %rbp, 6*8(%rsp);
+        movq %rdi, 5*8(%rsp);
+        movq %rsi, 4*8(%rsp);
+        movq %rdx, 3*8(%rsp);
+        movq %rcx, 2*8(%rsp);
+        movq %rbx, 1*8(%rsp);
+        movq %rax, 0*8(%rsp);
+        // Fix up the vector number.  We got into `trap` via a
+        // CALL, so hardware pushed the address after after the
+        // CALLQ instruction onto the stack.  The byte after that
+        // is the vector number.  Load the "return" address from
+        // the stack, then MOVZBQ what that points to into %rdi,
+        // and store back in the save area.
+        //
+        // The vector number is an argument to the dispatch
+        // function, along with the address of the register save
+        // area at the top of the stack.
         movq {vector_offset}(%rsp), %rdi;
-	movzbq (%rdi), %rdi;
-	movq %rdi, {vector_offset}(%rsp);
+        movzbq (%rdi), %rdi;
+        movq %rdi, {vector_offset}(%rsp);
         movq %rsp, %rsi;
         cmpq ${ktext_sel}, {cs_offset}(%rsp);
         je 1f;
@@ -142,31 +154,31 @@ pub unsafe extern "C" fn trap() -> ! {
         je 1f;
         swapgs;
         1:
-        popq %rax;
-        popq %rbx;
-        popq %rcx;
-        popq %rdx;
-        popq %rsi;
-        popq %rdi;
-        popq %rbp;
-        popq %r8;
-        popq %r9;
-        popq %r10;
-        popq %r11;
-        popq %r12;
-        popq %r13;
-        popq %r14;
-        popq %r15;
-        // If necessary, %gs is restored via swapgs above.
-        // %fs is special.  We ought to save it and restore
-        // it, should userspace ever use green threads.
-        //movw 24(%rsp), %gs;
-        movw 16(%rsp), %fs;
-        movw 8(%rsp), %es;
-        movw (%rsp), %ds;
-        addq $32, %rsp;
-        // Pop alignment word and error.
-        addq $16, %rsp;
+        movq 0*8(%rsp), %rax;
+        movq 1*8(%rsp), %rbx;
+        movq 2*8(%rsp), %rcx;
+        movq 3*8(%rsp), %rdx;
+        movq 4*8(%rsp), %rsi;
+        movq 5*8(%rsp), %rdi;
+        movq 6*8(%rsp), %rbp;
+        movq 7*8(%rsp), %r8;
+        movq 8*8(%rsp), %r9;
+        movq 9*8(%rsp), %r10;
+        movq 10*8(%rsp), %r11;
+        movq 11*8(%rsp), %r12;
+        movq 12*8(%rsp), %r13;
+        movq 13*8(%rsp), %r14;
+        movq 14*8(%rsp), %r15;
+        movw 15*8(%rsp), %ds;
+        movw 16*8(%rsp), %es;
+        // %gs is restored via swapgs above.  The system never changes
+        // it, so we don't bother restoring it here.  %fs is special.
+        // We do save and restore it, for TLS if anyone ever uses green
+        // threads.
+        movw 17*8(%rsp), %fs;
+        // movw 18*8(%rsp), %gs;
+        // Pop registers, alignment word and error.
+        addq $((2 + 4 + 15) * 8), %rsp;
         iretq
         "#,
         ktext_sel = const 8,
