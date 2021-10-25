@@ -9,8 +9,9 @@
 ///
 /// Hypatia uses recursive page tables with side-loading for
 /// address space inspection and manipulation.
-use crate::{Page, PageFrame, VPageAddr, HPA, PF1G, PF2M, PF4K, V4KA};
+use crate::{Page, PageFrame, VPageAddr, HPA, PF1G, PF2M, PF4K, V1GA, V2MA, V4KA, V512GA};
 use bitflags::bitflags;
+use core::ops::RangeInclusive;
 //use core::marker::PhantomData;    // XXX(cross): Not yet.
 use core::sync::atomic::{AtomicU64, Ordering};
 
@@ -171,6 +172,7 @@ impl Entry for L1E {}
 ///
 pub trait Level {
     type EntryType: Entry;
+    type VPageAddrType: VPageAddr + core::iter::Step;
     const BASE_ADDRESS: usize;
     const SIDE_BASE_ADDRESS: usize;
     const PAGE_SHIFT: usize;
@@ -233,6 +235,7 @@ pub enum Level1 {}
 
 impl Level for Level4 {
     type EntryType = L4E;
+    type VPageAddrType = V512GA;
     const BASE_ADDRESS: usize = 0xFFFF_FFFF_FFFF_F000;
     const SIDE_BASE_ADDRESS: usize = 0xFFFF_FFFF_FFFF_E000;
     const PAGE_SHIFT: usize = 39;
@@ -248,6 +251,7 @@ impl Level for Level4 {
 
 impl Level for Level3 {
     type EntryType = L3E;
+    type VPageAddrType = V1GA;
     const BASE_ADDRESS: usize = 0xFFFF_FFFF_FFE0_0000;
     const SIDE_BASE_ADDRESS: usize = 0xFFFF_FFFF_FFC0_0000;
     const PAGE_SHIFT: usize = 30;
@@ -265,6 +269,7 @@ impl Level for Level3 {
 
 impl Level for Level2 {
     type EntryType = L2E;
+    type VPageAddrType = V2MA;
     const BASE_ADDRESS: usize = 0xFFFF_FFFF_C000_0000;
     const SIDE_BASE_ADDRESS: usize = 0xFFFF_FFFF_8000_0000;
     const PAGE_SHIFT: usize = 21;
@@ -282,6 +287,7 @@ impl Level for Level2 {
 
 impl Level for Level1 {
     type EntryType = L1E;
+    type VPageAddrType = V4KA;
     const BASE_ADDRESS: usize = 0xFFFF_FF80_0000_0000;
     const SIDE_BASE_ADDRESS: usize = 0xFFFF_FF00_0000_0000;
     const PAGE_SHIFT: usize = 12;
@@ -368,7 +374,7 @@ pub fn translate(va: usize) -> HPA {
 
 /// Maps the given PF4K to the given virtual address in the current
 /// address space.
-pub fn map<F>(hpf: PF4K, flags: PTEFlags, va: V4KA, mut allocator: F) -> Result<()>
+pub fn map<F>(hpf: PF4K, flags: PTEFlags, va: V4KA, allocator: &mut F) -> Result<()>
 where
     F: FnMut() -> Result<PF4K>,
 {
@@ -394,6 +400,40 @@ where
     } else {
         Err("Already mapped")
     }
+}
+
+/// Creates paging structures corresponding to the given
+/// ranges of addresses.  Note that these are empty and don't
+/// map to anything, but if a call to this is successful, the
+/// radix tree for each range is fully constructed.
+pub fn make_ranges<F>(ranges: &[RangeInclusive<V4KA>], allocator: &mut F) -> Result<()>
+where
+    F: FnMut() -> Result<PF4K>,
+{
+    fn make_ranges_level<L, F>(ranges: &[RangeInclusive<V4KA>], allocator: &mut F) -> Result<()>
+    where
+        F: FnMut() -> Result<PF4K>,
+        L: Level,
+    {
+        let inner_flags: PTEFlags = PTEFlags::PRESENT | PTEFlags::WRITE;
+        for range in ranges.iter() {
+            let start = L::VPageAddrType::new_round_down(range.start().address());
+            let end = L::VPageAddrType::new_round_up(range.start().address());
+            for addr in start..end {
+                let va = addr.address();
+                if let None = L::entry(va) {
+                    let entry = allocator()?;
+                    L::set_entry(va, PTE::new(entry.pfa(), inner_flags));
+                }
+            }
+        }
+        Ok(())
+    }
+    make_ranges_level::<Level4, _>(ranges, allocator)?;
+    make_ranges_level::<Level3, _>(ranges, allocator)?;
+    make_ranges_level::<Level2, _>(ranges, allocator)?;
+    make_ranges_level::<Level1, _>(ranges, allocator)?;
+    Ok(())
 }
 
 /// Perform a walk against a side-loaded page table.
@@ -458,7 +498,7 @@ pub unsafe fn side_translate(va: usize) -> HPA {
 
 /// Maps the given PF4K to the given virtual address in the currently
 /// side-loaded address space.
-pub unsafe fn side_map<F>(hpf: PF4K, flags: PTEFlags, va: V4KA, mut allocator: F) -> Result<()>
+pub unsafe fn side_map<F>(hpf: PF4K, flags: PTEFlags, va: V4KA, allocator: &mut F) -> Result<()>
 where
     F: FnMut() -> Result<PF4K>,
 {
