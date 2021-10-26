@@ -5,9 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
+#![feature(assert_matches)]
 #![feature(lang_items)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
+
+mod x86_64;
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {}
