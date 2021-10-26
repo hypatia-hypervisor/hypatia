@@ -7,31 +7,28 @@ Recursive Page Table, -512 GiB
 _,
 Nested Page Table, -1 TiB
 _,
-Sideload Recursive PT, -1 TiB - 512 GiB
+Device Page Table, -1 TiB - 512 GiB
 _,
-Sideload Nested Page Table, -2 TiB
+Sideload Recursive Page Table, -2 TiB
+_,
+Sideload Nested Page Table, -2 TiB - 512 GiB
+_,
+Sideload Device Page Table, -3 TiB
 _,
 Global Area,
-, -3 TiB
-_,
-Monitor,
 , -4 TiB
 _,
-Trace Area,
+Per-CPU Area,
 , -5 TiB
 _,
-Per-CPU Area,
+Monitor,
 , -6 TiB
 _,
-.T&
-c.
-\.
-\.
-(reserved)
-\.
-\.
-.T&
-| l | l.
+Trace Area,
+, -7 TiB
+_,
+System Upgrade Area,
+, -8 TiB
 _,
 Supervisor,
 , -9 TiB
