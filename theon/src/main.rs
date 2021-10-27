@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
+#![feature(alloc_error_handler)]
 #![feature(allocator_api)]
 #![feature(asm)]
 #![feature(core_intrinsics)]
@@ -12,7 +13,6 @@
 #![feature(lang_items)]
 #![feature(naked_functions)]
 #![feature(proc_macro_hygiene)]
-#![feature(default_alloc_error_handler)]
 #![cfg_attr(test, allow(dead_code))]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
@@ -35,6 +35,7 @@ pub extern "C" fn apmain() -> ! {
 
 #[cfg(not(test))]
 mod runtime {
+    use alloc::alloc::Layout;
     use core::panic::PanicInfo;
 
     #[panic_handler]
@@ -42,6 +43,11 @@ mod runtime {
         libhypatia::panic::print_panic(info);
         #[allow(clippy::empty_loop)]
         loop {}
+    }
+
+    #[alloc_error_handler]
+    pub fn oom(layout: Layout) -> ! {
+        panic!("Early allocation failed on size {}", layout.size());
     }
 
     #[lang = "eh_personality"]
