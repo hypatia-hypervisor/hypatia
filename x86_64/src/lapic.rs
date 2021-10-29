@@ -7,6 +7,7 @@
 
 use bitstruct::bitstruct;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
 pub enum DeliveryMode {
     Fixed = 0b000,
@@ -141,15 +142,13 @@ impl bitstruct::IntoRaw<bool, TriggerMode> for ICR {
 
 #[cfg(test)]
 mod tests {
-    use core::assert_matches::assert_matches;
     use super::*;
+    use core::assert_matches::assert_matches;
 
     #[test]
     fn fixed() {
-        let icr = ICR(0)
-            .with_vector(0xFE)
-            .with_delivery_mode(DeliveryMode::Fixed)
-            .with_destination(2);
+        let icr =
+            ICR(0).with_vector(0xFE).with_delivery_mode(DeliveryMode::Fixed).with_destination(2);
         assert_eq!(icr.0, 0x0000_0002_0000_00fe);
     }
 

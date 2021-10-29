@@ -14,6 +14,7 @@ edition = "2021"
 
 [dependencies]
 bitflags = "*"
+bit_field = "*"
 bitstruct = "*"
 seq-macro = "*"
 x86 = "*"

@@ -50,6 +50,8 @@ pub struct Frame {
 const TRAPFRAME_VECTOR_OFFSET: usize = 0x98;
 const TRAPFRAME_CS_OFFSET: usize = 0xB0;
 
+pub(crate) type Stub = unsafe extern "C" fn() -> !;
+
 macro_rules! gen_stub {
     ($vecnum:literal) => {
         concat!(r#".balign 8; pushq $0; callq {trap}; .byte "#, $vecnum, ";")
@@ -89,10 +91,17 @@ macro_rules! gen_trap_stub {
     };
 }
 
+pub fn stubs() -> &'static [Stub; 256] {
+    unsafe { &*(trap_stubs as usize as *const [Stub; 256]) }
+}
+
+/// # Safety
+///
+/// Container for thunks.
 #[allow(dead_code)]
 #[link_section = ".trap"]
 #[naked]
-pub unsafe extern "C" fn stubs() -> ! {
+pub unsafe extern "C" fn trap_stubs() -> ! {
     asm!(
         seq!(N in 0..=255 {
             concat!( #( gen_trap_stub!(N), )* )
@@ -100,6 +109,9 @@ pub unsafe extern "C" fn stubs() -> ! {
         trap = sym trap, options(att_syntax, noreturn));
 }
 
+/// # Safety
+///
+/// Common trap handler.  Called from interrupt/exception stub.
 #[link_section = ".trap"]
 #[naked]
 pub unsafe extern "C" fn trap() -> ! {
