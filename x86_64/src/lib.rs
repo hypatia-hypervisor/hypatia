@@ -44,16 +44,23 @@
 //! not be mapped.
 
 #![feature(asm)]
+#![feature(assert_matches)]
 #![feature(naked_functions)]
 #![feature(step_trait)]
 #![cfg_attr(not(test), no_std)]
 
+use core::convert::TryFrom;
 use core::iter::Step;
 use zerocopy::FromBytes;
 
 pub mod cpu;
+pub mod gdt;
+pub mod idt;
 pub mod io;
+pub mod lapic;
+pub mod segment;
 pub mod trap;
+pub mod tss;
 pub mod vm;
 
 /// Useful constants for sizes.
@@ -374,5 +381,54 @@ impl Step for V512GA {
         let diff = count.checked_mul(Page512G::SIZE)?;
         let bck = start.0.checked_sub(diff)?;
         Some(V512GA(bck))
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum StackIndex {
+    Rsp0 = 0,
+    Ist1 = 1,
+    Ist2 = 2,
+    Ist3 = 3,
+    Ist4 = 4,
+    Ist5 = 5,
+    Ist6 = 6,
+    Ist7 = 7,
+}
+
+pub struct HyperStack {
+    address: *const u8,
+    size: usize,
+}
+
+impl HyperStack {
+    pub fn top(&self) -> *const u8 {
+        unsafe { self.address.add(self.size) }
+    }
+}
+
+/// CPU Protection Levels
+///
+/// On x86_64, lower (Ring0) is more privileged than higher.
+/// On 64-bit, we really only use Ring0 ("kernel" mode) and
+/// Ring3 ("user" mode).  In Hypatia, we actually only use
+/// kernel mode.
+pub enum CPL {
+    Ring0,
+    Ring1,
+    Ring2,
+    Ring3,
+}
+
+impl TryFrom<u8> for CPL {
+    type Error = &'static str;
+    fn try_from(raw: u8) -> Result<Self, Self::Error> {
+        match raw {
+            0b00 => Ok(CPL::Ring0),
+            0b01 => Ok(CPL::Ring1),
+            0b10 => Ok(CPL::Ring2),
+            0b11 => Ok(CPL::Ring3),
+            _ => Err("unrepresentable value in raw privilege level"),
+        }
     }
 }

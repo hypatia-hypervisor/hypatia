@@ -421,7 +421,7 @@ where
             let end = L::VPageAddrType::new_round_up(range.start().address());
             for addr in start..end {
                 let va = addr.address();
-                if let None = L::entry(va) {
+                if L::entry(va).is_none() {
                     let entry = allocator()?;
                     L::set_entry(va, PTE::new(entry.pfa(), inner_flags));
                 }
@@ -498,6 +498,11 @@ pub unsafe fn side_translate(va: usize) -> HPA {
 
 /// Maps the given PF4K to the given virtual address in the currently
 /// side-loaded address space.
+///
+/// # Safety
+///
+/// This is not safe.  The caller must ensure that a side-loaded
+/// page table is mapped, and that the TLB is free of stale entries.
 pub unsafe fn side_map<F>(hpf: PF4K, flags: PTEFlags, va: V4KA, allocator: &mut F) -> Result<()>
 where
     F: FnMut() -> Result<PF4K>,
