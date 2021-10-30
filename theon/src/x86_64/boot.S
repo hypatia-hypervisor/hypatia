@@ -57,6 +57,13 @@ UartDiv115200Lo =	1
 UartDiv115200Hi =	0
 UartTXRDY =		1 << 5
 
+// Programming Interrupt Controller constants.  So we can
+// turn it off.
+Pic1 =			0x20
+Pic1Data =		Pic1 + 1
+Pic2 =			0xA0
+Pic2Data =		Pic2 + 1
+
 FlagsID =		1 << 21
 CPUIDMaxLevel =		0x80000000
 CPUIDMinRequired =	0x80000001
@@ -101,6 +108,11 @@ startboot:
 	pushl	$0
 	pushl	%ebx
 	pushl	%eax
+
+	// Disable the PIC by masking all of its interrupts.
+	movb	$0xFF, %al
+	outb	%al, $Pic1Data
+	outb	%al, $Pic2Data
 
 	// Initialize the UART for debugging:
 	// * 115200bps
