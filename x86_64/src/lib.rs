@@ -44,6 +44,8 @@
 //! not be mapped.
 
 #![feature(asm)]
+#![feature(asm_const)]
+#![feature(asm_sym)]
 #![feature(assert_matches)]
 #![feature(naked_functions)]
 #![feature(step_trait)]
