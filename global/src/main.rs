@@ -6,22 +6,23 @@
 // https://opensource.org/licenses/MIT.
 
 #![feature(lang_items)]
+#![feature(start)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
-#[cfg_attr(not(test), no_mangle)]
-pub extern "C" fn main() {}
-
 #[cfg(not(test))]
-mod runtime {
-    use core::panic::PanicInfo;
+mod runtime;
 
-    #[panic_handler]
-    pub extern "C" fn panic(_info: &PanicInfo) -> ! {
-        #[allow(clippy::empty_loop)]
-        loop {}
-    }
+use arch::Page4K;
 
-    #[lang = "eh_personality"]
-    extern "C" fn eh_personality() {}
+/// Returns a static reference to the global zero page.
+pub fn zero_page() -> &'static Page4K {
+    const ZERO_PAGE: Page4K = Page4K::new();
+    &ZERO_PAGE
+}
+
+/// Initialize the system.
+#[start]
+pub extern "C" fn init() {
+    zero_page();
 }

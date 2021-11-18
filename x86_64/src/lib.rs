@@ -114,6 +114,14 @@ pub trait Page {
 #[repr(C, align(4096))]
 #[derive(FromBytes)]
 pub struct Page4K([u8; 4 * KIB]);
+
+impl Page4K {
+    /// Returns a new, zeroed page.
+    pub const fn new() -> Page4K {
+        Page4K([0; 4 * KIB])
+    }
+}
+
 impl Page for Page4K {
     const SIZE: usize = core::mem::size_of::<Self>();
     type FrameType = PF4K;
