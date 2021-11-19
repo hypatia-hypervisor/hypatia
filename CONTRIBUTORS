@@ -1,15 +1,19 @@
-# This is the official list of people who can contribute
-# (and typically have contributed) code to the Hypatia repository.
+#
+# This is the official list of people who have contributed
+# to the Hypatia repository.
+#
 # The AUTHORS file lists the copyright holders; this file
-# lists people.  For example, MIT employees are listed here
-# but not in AUTHORS, because MIT holds the copyright.
+# lists people.  For example, Oxide employees are listed here
+# but not in AUTHORS, because Oxide holds the copyright to
+# those authors' contributions.
 #
 # When adding J Random Contributor's name to this file,
 # either J's name or J's organization's name should be
 # added to the AUTHORS file, depending on whether the
-# individual or corporate owns the contribution.
-
+# individual or organization owns the contribution.
+#
 # Names should be added to this file like so:
+#
 #     Individual's name <submission email address>
 #     Individual's name <submission email address> <email2> <emailN>
 #
@@ -17,8 +21,9 @@
 # first address should be used in the submit logs and
 # that the other addresses should be recognized as the
 # same person when interacting on mailing lists or via tools.
-
-# Please keep the list sorted.
-
-Dan Cross <cross@gajendra.net> <cross@oxidecomputer.com> <crossd@gmail.com>
+#
+# Please keep this list lexiographically sorted.
+#
 Cory Maccarrone <darkstar6262@gmail.com> <maccarro@google.com>
+Dan Cross <cross@gajendra.net> <cross@oxidecomputer.com> <crossd@gmail.com>
+Gan Shun Lim <ganshun@gmail.com>
