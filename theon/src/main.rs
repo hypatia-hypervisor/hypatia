@@ -11,7 +11,7 @@
 #![feature(global_asm)]
 #![feature(lang_items)]
 #![feature(naked_functions)]
-#![cfg_attr(test, allow(dead_code))]
+#![feature(start)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
@@ -20,34 +20,17 @@ extern crate alloc;
 mod allocator;
 mod x86_64;
 
-#[cfg_attr(not(test), no_mangle)]
+#[cfg_attr(not(test), start, no_mangle)]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     x86_64::init::start(mbinfo_phys);
     panic!("main: trapstubs = {:#x}", arch::trap::stubs as usize);
 }
 
+#[cfg_attr(test, allow(dead_code))]
 #[no_mangle]
 pub extern "C" fn apmain() -> ! {
     panic!("apmain");
 }
 
 #[cfg(not(test))]
-mod runtime {
-    use alloc::alloc::Layout;
-    use core::panic::PanicInfo;
-
-    #[panic_handler]
-    pub extern "C" fn panic(info: &PanicInfo) -> ! {
-        libhypatia::panic::print_panic(info);
-        #[allow(clippy::empty_loop)]
-        loop {}
-    }
-
-    #[alloc_error_handler]
-    pub fn oom(layout: Layout) -> ! {
-        panic!("Early allocation failed on size {}", layout.size());
-    }
-
-    #[lang = "eh_personality"]
-    extern "C" fn eh_personality() {}
-}
+mod runtime;

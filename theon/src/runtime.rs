@@ -5,10 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
+use alloc::alloc::Layout;
 use core::panic::PanicInfo;
 
 #[panic_handler]
-pub extern "C" fn panic(_info: &PanicInfo) -> ! {
+pub extern "C" fn panic(info: &PanicInfo) -> ! {
+    libhypatia::panic::print_panic(info);
     #[allow(clippy::empty_loop)]
     loop {}
 }
@@ -16,9 +18,7 @@ pub extern "C" fn panic(_info: &PanicInfo) -> ! {
 #[lang = "eh_personality"]
 extern "C" fn eh_personality() {}
 
-/// This is unused.  It exists to keep the linker
-/// happy.
-#[cfg_attr(not(test), no_mangle)]
-pub extern "C" fn main() {
-    crate::init();
+#[alloc_error_handler]
+pub fn oom(layout: Layout) -> ! {
+    panic!("Early allocation failed on size {}", layout.size());
 }

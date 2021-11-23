@@ -16,8 +16,6 @@ pub extern "C" fn panic(_info: &PanicInfo) -> ! {
 #[lang = "eh_personality"]
 extern "C" fn eh_personality() {}
 
-/// This is unused.  It exists to keep the linker
-/// happy.
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     crate::init();
