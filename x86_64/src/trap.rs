@@ -145,10 +145,11 @@ pub unsafe extern "C" fn trap() -> ! {
         movq %rax, 0*8(%rsp);
         // Fix up the vector number.  We got into `trap` via a
         // CALL, so hardware pushed the address after after the
-        // CALLQ instruction onto the stack.  The byte after that
-        // is the vector number.  Load the "return" address from
-        // the stack, then MOVZBQ what that points to into %rdi,
-        // and store back in the save area.
+        // CALLQ instruction onto the stack, and the byte at that
+        // location is the vector number from the stub.  Load
+        // the "return" address from the stack, then MOVZBQ what
+        // that points to into %rdi, and store back in the save
+        // area.
         //
         // The vector number is an argument to the dispatch
         // function, along with the address of the register save
@@ -157,15 +158,18 @@ pub unsafe extern "C" fn trap() -> ! {
         movzbq (%rdi), %rdi;
         movq %rdi, {vector_offset}(%rsp);
         movq %rsp, %rsi;
+        // If we're already in kernel mode, don't swap %gs.
         cmpq ${ktext_sel}, {cs_offset}(%rsp);
         je 1f;
         swapgs;
         1:
         callq {dispatch};
+        // If we're returning to kernel mode, don't swap %gs.
         cmpq ${ktext_sel}, {cs_offset}(%rsp);
         je 1f;
         swapgs;
         1:
+        // Restore the general purpose registers.
         movq 0*8(%rsp), %rax;
         movq 1*8(%rsp), %rbx;
         movq 2*8(%rsp), %rcx;
@@ -181,6 +185,7 @@ pub unsafe extern "C" fn trap() -> ! {
         movq 12*8(%rsp), %r13;
         movq 13*8(%rsp), %r14;
         movq 14*8(%rsp), %r15;
+        // Restore the segmentation registers.
         movw 15*8(%rsp), %ds;
         movw 16*8(%rsp), %es;
         // %gs is restored via swapgs above.  The system never changes
@@ -191,6 +196,7 @@ pub unsafe extern "C" fn trap() -> ! {
         // movw 18*8(%rsp), %gs;
         // Pop registers, alignment word and error.
         addq $((2 + 4 + 15) * 8), %rsp;
+        // Go back to whence you came.
         iretq
         "#,
         ktext_sel = const 8,
