@@ -108,7 +108,26 @@ fn cargo() -> String {
     env_or("CARGO", "cargo")
 }
 fn objcopy() -> String {
-    env_or("OBJCOPY", "llvm-objcopy")
+    let llvm_objcopy = {
+        let toolchain = env_or("RUSTUP_TOOLCHAIN", "x86_64-unknown-none");
+        let pos = toolchain.find('-').map(|p| p + 1).unwrap_or(0);
+        let host = toolchain[pos..].to_string();
+        let home = env_or("RUSTUP_HOME", "");
+        let mut path = PathBuf::from(home);
+        path.push("toolchains");
+        path.push(toolchain);
+        path.push("lib");
+        path.push("rustlib");
+        path.push(host);
+        path.push("bin");
+        path.push("llvm-objcopy");
+        if path.exists() {
+            path.into_os_string().into_string().unwrap()
+        } else {
+            "llvm-objcopy".into()
+        }
+    };
+    env_or("OBJCOPY", &llvm_objcopy)
 }
 fn qemu_system_x86_64() -> String {
     env_or("QEMU", "qemu-system-x86_64")
