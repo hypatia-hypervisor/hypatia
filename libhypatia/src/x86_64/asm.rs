@@ -5,4 +5,4 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-global_asm!(include_str!("x86_64.S"));
+core::arch::global_asm!(include_str!("x86_64.S"));

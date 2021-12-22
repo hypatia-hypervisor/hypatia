@@ -6,4 +6,4 @@
 // https://opensource.org/licenses/MIT.
 
 #[cfg(not(test))]
-global_asm!(include_str!("boot.S"), options(att_syntax));
+core::arch::global_asm!(include_str!("boot.S"), options(att_syntax));

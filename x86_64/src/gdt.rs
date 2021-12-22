@@ -9,6 +9,7 @@
 //!
 //! In the host, we only support the 64-bit TSS.
 
+use core::arch::asm;
 use crate::segment;
 use crate::tss::TSS;
 

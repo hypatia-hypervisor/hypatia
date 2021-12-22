@@ -7,8 +7,6 @@
 
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
-#![feature(asm)]
-#![feature(global_asm)]
 #![feature(lang_items)]
 #![feature(naked_functions)]
 #![feature(start)]

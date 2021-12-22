@@ -60,6 +60,7 @@ impl Descriptor {
             .with_privilege_level(CPL::Ring0)
     }
 
+    #[must_use]
     pub fn with_privilege_level(self, level: CPL) -> Descriptor {
         self.with_raw_privilege_level(level as u8)
     }
@@ -105,6 +106,7 @@ impl TaskStateDescriptor {
         TaskStateDescriptor(TYPE_TASK_AVAILABLE)
     }
 
+    #[must_use]
     pub fn with_privilege_level(self, level: CPL) -> TaskStateDescriptor {
         self.with_raw_privilege_level(level as u8)
     }
@@ -154,6 +156,7 @@ impl InterruptGateDescriptor {
             .with_privilege_level(CPL::Ring0)
     }
 
+    #[must_use]
     pub fn with_privilege_level(self, level: CPL) -> InterruptGateDescriptor {
         self.with_raw_privilege_level(level as u8)
     }

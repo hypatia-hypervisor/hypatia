@@ -43,7 +43,6 @@
 //! page in some address space.  The page may or may
 //! not be mapped.
 
-#![feature(asm)]
 #![feature(asm_const)]
 #![feature(asm_sym)]
 #![feature(assert_matches)]
@@ -94,6 +93,7 @@ impl HPA {
         self.0
     }
 
+    #[must_use]
     pub const fn offset(self, offset: u64) -> HPA {
         HPA::new(self.0 + offset as u64)
     }

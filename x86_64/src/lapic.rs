@@ -56,6 +56,7 @@ bitstruct! {
 }
 
 impl ICR {
+    #[must_use]
     pub fn with_delivery_mode(self, mode: DeliveryMode) -> ICR {
         self.with_raw_delivery_mode(mode as u8)
     }
@@ -71,6 +72,7 @@ impl ICR {
         }
     }
 
+    #[must_use]
     pub fn with_destination_shorthand(self, shorthand: Option<DestinationShorthand>) -> ICR {
         self.with_raw_destination_shorthand(shorthand.map_or(0, |s| s as u8))
     }

@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#![feature(global_asm)]
 #![cfg_attr(test, allow(dead_code))]
 #![cfg_attr(not(test), no_std)]
 

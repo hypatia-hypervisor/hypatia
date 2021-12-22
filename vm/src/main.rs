@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#![feature(asm)]
 #![feature(lang_items)]
 #![feature(start)]
 #![cfg_attr(not(test), no_main)]
@@ -16,7 +15,7 @@ mod x86_64;
 #[cfg_attr(not(test), start, no_mangle)]
 pub extern "C" fn main() {
     unsafe {
-        asm!("movl $0xcafef00d, %eax", options(att_syntax));
+        core::arch::asm!("movl $0xcafef00d, %eax", options(att_syntax));
     }
 }
 
