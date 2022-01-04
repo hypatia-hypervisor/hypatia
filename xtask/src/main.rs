@@ -38,53 +38,48 @@ impl Build {
 }
 
 fn main() {
-    let matches = clap_app!(xtask =>
-        (version: "0.1.0")
-        (author: "The Hypatia Authors")
-        (about: "Build support for the Hypatia system")
-        (@subcommand build =>
-            (about: "Builds Hypatia")
-            (@arg release: conflicts_with[debug] --release "Build release version")
-            (@arg debug: conflicts_with[release] --debug "Build debug version (default)")
+    let matches = clap::App::new("xtask")
+        .version("0.1.0")
+        .author("The Hypatia Authors")
+        .about("Build support for the Hypatia system")
+        .subcommand(clap::App::new("build").about("Builds Hypatia").args(&[
+            arg!(--release "Build release version").conflicts_with("debug"),
+            arg!(--debug "Build debug version (default)").conflicts_with("release"),
+        ]))
+        .subcommand(clap::App::new("dist").about("Builds multibootable Hypatia images").args(&[
+            arg!(--release "Build a release version").conflicts_with("debug"),
+            arg!(--debug "Build a debug version").conflicts_with("release"),
+        ]))
+        .subcommand(
+            clap::App::new("archive")
+                .about("Builds multibootable Hypatia images and packages them into an archive")
+                .args(&[
+                    arg!(--release "Build a release version").conflicts_with("debug"),
+                    arg!(--debug "Build a debug version").conflicts_with("release"),
+                ]),
         )
-        (@subcommand dist =>
-            (about: "Builds multibootable Hypatia images")
-            (@arg release: conflicts_with[debug] --release "Build a release version")
-            (@arg debug: conflicts_with[release] --debug "Build a debug version")
-        )
-        (@subcommand archive =>
-            (about: "Builds multibootable Hypatia images and packages them into an archive")
-            (@arg release: conflicts_with[debug] --release "Build a release version")
-            (@arg debug: conflicts_with[release] --debug "Build a debug version")
-        )
-        (@subcommand test =>
-            (about: "Builds multibootable Hypatia images")
-            (@arg release: conflicts_with[debug] --release "Build a release version")
-            (@arg debug: conflicts_with[release] --debug "Build a debug version")
-        )
-        (@subcommand qemu =>
-            (about: "Boot Theon under QEMU")
-            (@arg release: conflicts_with[debug] --release "Build a release version")
-            (@arg debug: conflicts_with[release] --debug "Build a debug version")
-        )
-        (@subcommand qemukvm =>
-            (about: "Boot Theon under QEMU with KVM")
-            (@arg release: conflicts_with[debug] --release "Build a release version")
-            (@arg debug: conflicts_with[release] --debug "Build a debug version")
-        )
-        (@subcommand clean =>
-            (about: "Cargo clean")
-        )
-    )
-    .get_matches();
+        .subcommand(clap::App::new("test").about("Builds multibootable Hypatia images").args(&[
+            arg!(--release "Build a release version").conflicts_with("debug"),
+            arg!(--debug "Build a debug version").conflicts_with("release"),
+        ]))
+        .subcommand(clap::App::new("qemu").about("Boot Theon under QEMU").args(&[
+            arg!(--release "Build a release version").conflicts_with("debug"),
+            arg!(--debug "Build a debug version").conflicts_with("release"),
+        ]))
+        .subcommand(clap::App::new("qemukvm").about("Boot Theon under QEMU with KVM").args(&[
+            arg!(--release "Build a release version").conflicts_with("debug"),
+            arg!(--debug "Build a debug version").conflicts_with("release"),
+        ]))
+        .subcommand(clap::App::new("clean").about("Cargo clean"))
+        .get_matches();
     if let Err(e) = match matches.subcommand() {
-        ("build", Some(m)) => build(build_type(m)),
-        ("dist", Some(m)) => dist(build_type(m)),
-        ("archive", Some(m)) => archive(build_type(m)),
-        ("test", Some(m)) => test(build_type(m)),
-        ("qemu", Some(m)) => qemu(build_type(m)),
-        ("qemukvm", Some(m)) => qemukvm(build_type(m)),
-        ("clean", _) => clean(),
+        Some(("build", m)) => build(build_type(m)),
+        Some(("dist", m)) => dist(build_type(m)),
+        Some(("archive", m)) => archive(build_type(m)),
+        Some(("test", m)) => test(build_type(m)),
+        Some(("qemu", m)) => qemu(build_type(m)),
+        Some(("qemukvm", m)) => qemukvm(build_type(m)),
+        Some(("clean", _)) => clean(),
         _ => Err("bad subcommand".into()),
     } {
         eprintln!("{}", e);
