@@ -62,6 +62,7 @@ fn main() {
             arg!(--release "Build a release version").conflicts_with("debug"),
             arg!(--debug "Build a debug version").conflicts_with("release"),
         ]))
+        .subcommand(clap::App::new("lint").about("Cargo clippy"))
         .subcommand(clap::App::new("qemu").about("Boot Theon under QEMU").args(&[
             arg!(--release "Build a release version").conflicts_with("debug"),
             arg!(--debug "Build a debug version").conflicts_with("release"),
@@ -77,6 +78,7 @@ fn main() {
         Some(("dist", m)) => dist(build_type(m)),
         Some(("archive", m)) => archive(build_type(m)),
         Some(("test", m)) => test(build_type(m)),
+        Some(("lint", _)) => lint(),
         Some(("qemu", m)) => qemu(build_type(m)),
         Some(("qemukvm", m)) => qemukvm(build_type(m)),
         Some(("clean", _)) => clean(),
@@ -193,6 +195,14 @@ fn test(profile: Build) -> Result<()> {
     let status = cmd.status()?;
     if !status.success() {
         return Err("test failed".into());
+    }
+    Ok(())
+}
+
+fn lint() -> Result<()> {
+    let status = Command::new(cargo()).current_dir(workspace()).arg("clippy").status()?;
+    if !status.success() {
+        return Err("lint failed".into());
     }
     Ok(())
 }
