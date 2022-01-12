@@ -24,8 +24,9 @@ pub struct Frame {
     // It is arguable whether we should care about
     // these registers.  x86 segmentation (aside from
     // FS and GS) isn't used once we're in long mode,
-    // and rxv64 doesn't support real or compatibility
-    // mode, so these are effectively unused.
+    // and we doesn't support real or compatibility
+    // mode in the hypervisor, so these are effectively
+    // unused.
     //
     // Regardless, they exist, so we save and restore
     // them.  Some kernels do this, some do not.  Note
@@ -48,8 +49,8 @@ pub struct Frame {
     ss: u64,
 }
 
-const TRAPFRAME_VECTOR_OFFSET: usize = 0x98;
-const TRAPFRAME_CS_OFFSET: usize = 0xB0;
+const TRAPFRAME_VECTOR_OFFSET: usize = 19 * core::mem::size_of::<u64>();
+const TRAPFRAME_CS_OFFSET: usize = 22 * core::mem::size_of::<u64>();
 
 pub(crate) type Stub = unsafe extern "C" fn() -> !;
 
