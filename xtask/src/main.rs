@@ -5,9 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#[macro_use]
-extern crate clap;
-
 use std::{
     env,
     path::{Path, PathBuf},
@@ -43,33 +40,33 @@ fn main() {
         .author("The Hypatia Authors")
         .about("Build support for the Hypatia system")
         .subcommand(clap::App::new("build").about("Builds Hypatia").args(&[
-            arg!(--release "Build release version").conflicts_with("debug"),
-            arg!(--debug "Build debug version (default)").conflicts_with("release"),
+            clap::arg!(--release "Build release version").conflicts_with("debug"),
+            clap::arg!(--debug "Build debug version (default)").conflicts_with("release"),
         ]))
         .subcommand(clap::App::new("dist").about("Builds multibootable Hypatia images").args(&[
-            arg!(--release "Build a release version").conflicts_with("debug"),
-            arg!(--debug "Build a debug version").conflicts_with("release"),
+            clap::arg!(--release "Build a release version").conflicts_with("debug"),
+            clap::arg!(--debug "Build a debug version").conflicts_with("release"),
         ]))
         .subcommand(
             clap::App::new("archive")
                 .about("Builds multibootable Hypatia images and packages them into an archive")
                 .args(&[
-                    arg!(--release "Build a release version").conflicts_with("debug"),
-                    arg!(--debug "Build a debug version").conflicts_with("release"),
+                    clap::arg!(--release "Build a release version").conflicts_with("debug"),
+                    clap::arg!(--debug "Build a debug version").conflicts_with("release"),
                 ]),
         )
         .subcommand(clap::App::new("test").about("Builds multibootable Hypatia images").args(&[
-            arg!(--release "Build a release version").conflicts_with("debug"),
-            arg!(--debug "Build a debug version").conflicts_with("release"),
+            clap::arg!(--release "Build a release version").conflicts_with("debug"),
+            clap::arg!(--debug "Build a debug version").conflicts_with("release"),
         ]))
         .subcommand(clap::App::new("lint").about("Cargo clippy"))
         .subcommand(clap::App::new("qemu").about("Boot Theon under QEMU").args(&[
-            arg!(--release "Build a release version").conflicts_with("debug"),
-            arg!(--debug "Build a debug version").conflicts_with("release"),
+            clap::arg!(--release "Build a release version").conflicts_with("debug"),
+            clap::arg!(--debug "Build a debug version").conflicts_with("release"),
         ]))
         .subcommand(clap::App::new("qemukvm").about("Boot Theon under QEMU with KVM").args(&[
-            arg!(--release "Build a release version").conflicts_with("debug"),
-            arg!(--debug "Build a debug version").conflicts_with("release"),
+            clap::arg!(--release "Build a release version").conflicts_with("debug"),
+            clap::arg!(--debug "Build a debug version").conflicts_with("release"),
         ]))
         .subcommand(clap::App::new("clean").about("Cargo clean"))
         .get_matches();
