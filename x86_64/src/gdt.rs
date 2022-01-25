@@ -9,9 +9,9 @@
 //!
 //! In the host, we only support the 64-bit TSS.
 
-use core::arch::asm;
 use crate::segment;
 use crate::tss::TSS;
+use core::arch::asm;
 
 /// Support the x86_64 64-bit Global Descriptor Table.
 ///
@@ -37,6 +37,18 @@ pub struct GDT {
 }
 
 impl GDT {
+    pub const fn empty() -> GDT {
+        GDT {
+            null: segment::Descriptor::empty(),
+            hypertext: segment::Descriptor::empty(),
+            _hyperdata: segment::Descriptor::empty(),
+            _userdata: segment::Descriptor::empty(),
+            _usertext: segment::Descriptor::empty(),
+            _unused: segment::Descriptor::empty(),
+            task: segment::TaskStateDescriptor::empty(),
+        }
+    }
+
     /// Returns a new GDT with a task segment descriptor that refers
     /// to the given TSS.
     pub fn new(task_state: &TSS) -> GDT {
@@ -73,7 +85,7 @@ impl GDT {
         asm!(r#"
             subq $16, %rsp;
             movq {}, 8(%rsp);
-            movq ${}, 6(%rsp);
+            movw ${}, 6(%rsp);
             lgdt 6(%rsp);
             addq $16, %rsp;
             "#, in(reg) base, const LIMIT, options(att_syntax));

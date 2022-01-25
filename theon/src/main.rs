@@ -21,6 +21,7 @@ mod x86_64;
 #[cfg_attr(not(test), start, no_mangle)]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     x86_64::init::start(mbinfo_phys);
+    unsafe { core::arch::asm!("int3") };
     panic!("main: trapstubs = {:#x}", arch::trap::stubs as usize);
 }
 

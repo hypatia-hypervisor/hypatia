@@ -52,7 +52,8 @@ pub struct Frame {
 const TRAPFRAME_VECTOR_OFFSET: usize = 19 * core::mem::size_of::<u64>();
 const TRAPFRAME_CS_OFFSET: usize = 22 * core::mem::size_of::<u64>();
 
-pub(crate) type Stub = unsafe extern "C" fn() -> !;
+#[repr(transparent)]
+pub struct Stub(usize);
 
 macro_rules! gen_stub {
     ($vecnum:literal) => {

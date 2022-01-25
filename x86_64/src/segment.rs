@@ -10,7 +10,7 @@
 //! 64-bit segmentation.
 //!
 
-use crate::{StackIndex, CPL};
+use crate::{gdt, trap, StackIndex, CPL};
 
 use bit_field::BitField;
 use bitstruct::bitstruct;
@@ -118,7 +118,7 @@ impl TaskStateDescriptor {
 
 bitstruct! {
     /// Interrupt gate descriptors are entries in the IDT.
-    #[derive(Clone, Copy, )]
+    #[derive(Clone, Copy, Default)]
     pub struct InterruptGateDescriptor(u128) {
         pub offset0: u16 = 0..16;
         pub segment_selector: u16 = 16..32;
@@ -137,21 +137,19 @@ bitstruct! {
 }
 
 impl InterruptGateDescriptor {
-    pub fn empty() -> InterruptGateDescriptor {
+    pub const fn empty() -> InterruptGateDescriptor {
         const TYPE_INTERRUPT_GATE: u128 = 0b1110 << (32 + 8);
         InterruptGateDescriptor(TYPE_INTERRUPT_GATE)
     }
 
-    pub fn new(
-        thunk: unsafe extern "C" fn() -> !,
-        stack_index: StackIndex,
-    ) -> InterruptGateDescriptor {
-        let va = thunk as usize;
+    pub fn new(thunk: &trap::Stub, stack_index: StackIndex) -> InterruptGateDescriptor {
+        let va = thunk as *const _ as usize;
         InterruptGateDescriptor::empty()
             .with_offset0(va.get_bits(0..16) as u16)
             .with_offset16(va.get_bits(16..32) as u16)
             .with_offset32(va.get_bits(32..64) as u32)
             .with_raw_stack_table_index(stack_index as u8)
+            .with_segment_selector(gdt::GDT::code_selector())
             .with_present(true)
             .with_privilege_level(CPL::Ring0)
     }
