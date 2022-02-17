@@ -35,40 +35,44 @@ impl Build {
 }
 
 fn main() {
-    let matches = clap::App::new("xtask")
+    let matches = clap::Command::new("xtask")
         .version("0.1.0")
         .author("The Hypatia Authors")
         .about("Build support for the Hypatia system")
-        .subcommand(clap::App::new("build").about("Builds Hypatia").args(&[
+        .subcommand(clap::Command::new("build").about("Builds Hypatia").args(&[
             clap::arg!(--release "Build release version").conflicts_with("debug"),
             clap::arg!(--debug "Build debug version (default)").conflicts_with("release"),
         ]))
-        .subcommand(clap::App::new("dist").about("Builds multibootable Hypatia images").args(&[
-            clap::arg!(--release "Build a release version").conflicts_with("debug"),
-            clap::arg!(--debug "Build a debug version").conflicts_with("release"),
-        ]))
+        .subcommand(clap::Command::new("dist").about("Builds multibootable Hypatia images").args(
+            &[
+                clap::arg!(--release "Build a release version").conflicts_with("debug"),
+                clap::arg!(--debug "Build a debug version").conflicts_with("release"),
+            ],
+        ))
         .subcommand(
-            clap::App::new("archive")
+            clap::Command::new("archive")
                 .about("Builds multibootable Hypatia images and packages them into an archive")
                 .args(&[
                     clap::arg!(--release "Build a release version").conflicts_with("debug"),
                     clap::arg!(--debug "Build a debug version").conflicts_with("release"),
                 ]),
         )
-        .subcommand(clap::App::new("test").about("Builds multibootable Hypatia images").args(&[
+        .subcommand(clap::Command::new("test").about("Builds multibootable Hypatia images").args(
+            &[
+                clap::arg!(--release "Build a release version").conflicts_with("debug"),
+                clap::arg!(--debug "Build a debug version").conflicts_with("release"),
+            ],
+        ))
+        .subcommand(clap::Command::new("lint").about("Cargo clippy"))
+        .subcommand(clap::Command::new("qemu").about("Boot Theon under QEMU").args(&[
             clap::arg!(--release "Build a release version").conflicts_with("debug"),
             clap::arg!(--debug "Build a debug version").conflicts_with("release"),
         ]))
-        .subcommand(clap::App::new("lint").about("Cargo clippy"))
-        .subcommand(clap::App::new("qemu").about("Boot Theon under QEMU").args(&[
+        .subcommand(clap::Command::new("qemukvm").about("Boot Theon under QEMU with KVM").args(&[
             clap::arg!(--release "Build a release version").conflicts_with("debug"),
             clap::arg!(--debug "Build a debug version").conflicts_with("release"),
         ]))
-        .subcommand(clap::App::new("qemukvm").about("Boot Theon under QEMU with KVM").args(&[
-            clap::arg!(--release "Build a release version").conflicts_with("debug"),
-            clap::arg!(--debug "Build a debug version").conflicts_with("release"),
-        ]))
-        .subcommand(clap::App::new("clean").about("Cargo clean"))
+        .subcommand(clap::Command::new("clean").about("Cargo clean"))
         .get_matches();
     if let Err(e) = match matches.subcommand() {
         Some(("build", m)) => build(build_type(m)),
