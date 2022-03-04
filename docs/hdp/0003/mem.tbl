@@ -18,7 +18,7 @@ _,
 Global Area,
 , -4 TiB
 _,
-Per-CPU Area,
+Per-CPU/Node Area,
 , -5 TiB
 _,
 Monitor,
