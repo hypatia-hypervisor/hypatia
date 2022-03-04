@@ -1,0 +1,13 @@
+:state: Needed
+:date: 2021-05-07
+:labels: design
+
+Theon Boot Loader and Hypatia Boot Process
+==========================================
+
+Describes the Theon boot loader and the process
+of starting Hypatia.
+
+Colophon
+--------
+Historically, Theon was Hypatia's father.

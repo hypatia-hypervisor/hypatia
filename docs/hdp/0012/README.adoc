@@ -2,7 +2,7 @@
 :date: 2021-05-07
 :labels: design
 
-Hypatia vcpu tasks
-==================
+Hypatia vm tasks
+=================
 
-Describes the vcpu task specifically
+Describes the VM control (vm) task

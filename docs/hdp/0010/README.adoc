@@ -2,8 +2,123 @@
 :date: 2021-05-07
 :labels: design
 
-Hypatia Virtual Machines
-========================
+Hypatia Tasks
+=============
 
-Describes virtual machines in Hypatia as a collection
-of tasks, how their virtual memories relate, etc.
+In Hypatia, tasks are independent flows of execution that can be
+scheduled.
+
+Tasks resemble processes in that they are instances of executing
+programs, but they are cooperatively scheduled.  Similarly, they
+resemble threads by encapsulating a logical flow of execution,
+but they own and run in their own address space.
+
+The set of tasks in Hypatia is small and fixed, currently
+limited to the supervisor, memory manager, device manager, VM
+control tasks ("vm") and VCPU tasks ("vcpu").
+
+The supervisor, memory and device manager tasks are described in
+other HDPs and not covered here, but it is important to note
+that there is exactly one instance of each of these tasks in a
+running system.
+
+As its name implies, the vm control task is responsible for
+coordinating and controlling an instance of a virtual machine,
+while the vcpu task drives an instance of a single VCPU within a
+virtual machine.  There many be many instances of each of these
+types of task.
+
+Tasks tend to run in host kernel mode.
+
+Task Sets
+---------
+
+Tasks are organized into task sets; all tasks are members of
+exactly one task set.  The first task in a task set is the
+_task set leader_.
+
+For example, a VM is in a task set consisting of a single VM
+control task, which is the task set leader, as well as one or
+more VCPU tasks: one for each configured VCPU in the virtual
+machine.
+
+Task sets have the property that members can share a portion of
+their address space; this is the _task set area_ that is
+described in the memory HDP.  This area is owned by the task set
+leader, but exposed mapped into the address space of the other
+members of the set: this allows members of a task set to
+coordinate via shared memory.  The posted interrupt descriptor
+for a VCPU is mapped into this area, for example, so that VCPUs
+may easily send each other IPIs.
+
+External Communications
+-----------------------
+
+Communication with a task is via means of a slotted mailbox:
+this is a mappable data structure that may be modeled as an
+array of messages and their responses; the mailbox is sized so
+that each element can hold the largest message that can be sent,
+as well as its response.
+
+Address Spaces
+--------------
+
+As mentioned, each task runs in its own address space.  That
+address space can map segments from the larger system, as well
+as the task set's shared address space.  Tasks of a particular
+type also tend to share text and read-only data, but otherwise,
+have their own their private stack and read-write data segment
+described by their own page tables.
+
+Bootstrapping
+-------------
+
+The supervisor task is automatically started by the bootstrap
+program when the system is initialized: for coldboot, the
+"theon" loader loads the supervisor task into memory, creates a
+scheduler entry for it that "returns" to its entry point, and
+then trampolines into the scheduler through the "holding" kernel
+(which also destroys the theon image).
+
+Theon is responsible for partially loading task binaries.  It
+parses the binary files, creating a minimal representation of
+the binary's text, read-only data, read-write data, and stack
+requirements that is then passed into the supervisor.  The
+supervisor takes ownership of this partially loaded task image.
+
+Management
+----------
+
+Creation, deletion, and other similar management of tasks is
+accomplished by calls to the supervisor.  The supervisor owns
+the parsed and partially loaded task data and creates a new task
+by allocating an address space, mapping (and copying) the task
+image data into the new task, and then setting it runnable in
+the scheduler.
+
+Scheduling
+----------
+
+For scheduling purposes, tasks are described by a minimal _task
+descriptor_, which contains a task identifier (an integer), the
+identifier of an affine task that can be co-scheduled on the
+same physical CPU core (or none if the task must be exclusively
+scheduled on the core) the physical address of the page-table
+root pointer for the task's address space, and the address of a
+stack within that address space.
+
+Tasks are cooperatively scheduled.  A task may arrange to
+interrupt itself, but it will always voluntarily yield the
+processor by calling into the scheduler segment.
+
+The Hypatia scheduler keeps track of what tasks are assigned to
+what CPU threads, and uses a simple, table-driven approach to
+scheduling, while respecting the affinity constraints of
+individual tasks so that for instance, VCPU tasks assigned to
+paired hyperthreads in the guest are co-scheduled on physical
+host hyperthreads.
+
+The scheduler is written in terms of minimal task descriptors
+that are designed to avoid leaking private information, so that
+the it can be invoked without introducing speculative attack
+vulnerabilities.
