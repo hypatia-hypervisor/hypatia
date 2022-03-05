@@ -5,4 +5,50 @@
 Hypatia Segments
 ================
 
-Describes Hypatia segments and their uses.
+Segments in Hypatia are regions of shared code and data that are
+accessible from multiple tasks.  Conceptually, they are similar
+to shared libraries, and have their own unique text, read-only-,
+and read/write data sections.  Unlike shared libraries, the
+read/write data sections are unique to the segment, not the
+tasks using the segment.  Tasks are inspired by, but less
+general than, Multics segments.
+
+Segments provide useful shared services to the rest of the
+system.  Inter-segment linkage is via explicitly accessed
+transfer vectors; the set of services exposed by a segment is
+tightly controlled to prevent accidentally leaking data or
+introducing behavioral dependencies on different components.
+
+Segments only provide services to other software in the system.
+As such, they cannot be scheduled.
+
+Inter-segment Linkage
+---------------------
+
+The interface exposed by a segment is small, and very tightly
+controlled.  Invoking a function in a segment happens by means
+of an indirect call through a _transfer vector_: part of the
+initialization of the segment is the allocation and
+initialization of a set of pointers to function entry points at
+some known location relative to the location of the segment
+itself, which is fixed: see the HDP on memory for details.  When
+a task (or other segment) wishes to call a service in some segment,
+it looks up the entry point corresponding to the service in the
+transfer vector, and jumps to it; this is done by an assembly
+language stub.  Returns are via the normal mechanism.
+
+Note that we explicitly avoid using e.g., ELF PLTs to avoid
+accidentally leaking data from the segment, or accessing
+unintended code.
+
+Bootstrapping
+-------------
+
+Hypatia segments are shipped as separately compiled executable
+images, and loaded by theon at cold boot.  Once the segments are
+loaded, theon invokes their main entry points; this code is
+responsible for initializing the segment and preparing it for
+use by the rest of the system.
+
+A critical task completed by the initialization routine is setting
+up the transfer vector used to access the segment's services.
