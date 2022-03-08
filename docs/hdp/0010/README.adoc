@@ -14,13 +14,9 @@ resemble threads by encapsulating a logical flow of execution,
 but they own and run in their own address space.
 
 The set of tasks in Hypatia is small and fixed, currently
-limited to the supervisor, memory manager, device manager, VM
-control tasks ("vm") and VCPU tasks ("vcpu").
-
-The supervisor, memory and device manager tasks are described in
-other HDPs and not covered here, but it is important to note
-that there is exactly one instance of each of these tasks in a
-running system.
+limited to the system task, VM control tasks ("vm") and VCPU
+tasks ("vcpu").  There is exactly one instance of the system
+task per machine.
 
 As its name implies, the vm control task is responsible for
 coordinating and controlling an instance of a virtual machine,
@@ -44,7 +40,7 @@ machine.
 
 Task sets have the property that members can share a portion of
 their address space; this is the _task set area_ that is
-described in the memory HDP.  This area is owned by the task set
+described in the ystemmemory HDP.  This area is owned by the task set
 leader, but exposed mapped into the address space of the other
 members of the set: this allows members of a task set to
 coordinate via shared memory.  The posted interrupt descriptor
@@ -73,17 +69,25 @@ described by their own page tables.
 Bootstrapping
 -------------
 
-The supervisor task is automatically started by the bootstrap
-program when the system is initialized: for coldboot, the
-"theon" loader loads the supervisor task into memory, creates a
-scheduler entry for it that "returns" to its entry point, and
-then trampolines into the scheduler through the "holding" kernel
-(which also destroys the theon image).
+The supervisor segment is automatically initialized by the
+bootstrap program when the system is initialized: for coldboot,
+the "theon" loader loads the system task binary into memory,
+then creates a scheduler descriptor for the task, crafted to
+"return" to the task's entry point.  It then serializes this
+scheduler descriptor, along with a description of the rest of
+the system, and invokes supervisor entry point for
+initializaton, passing the serialized system description as the
+sole argument.  The effect is that the machine will be
+initialized with a scheduleable single task, the system task,
+set to resume in its initialization path.  Theon then
+trampolines into the scheduler through the "holding" kernel
+(which also destroys the theon image), effectively removing
+itself from the existence.
 
 Theon is responsible for partially loading task binaries.  It
 parses the binary files, creating a minimal representation of
 the binary's text, read-only data, read-write data, and stack
-requirements that is then passed into the supervisor.  The
+requirements that is then passed into a supervisor call.  The
 supervisor takes ownership of this partially loaded task image.
 
 Management
