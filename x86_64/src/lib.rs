@@ -55,6 +55,7 @@ use core::iter::Step;
 use zerocopy::FromBytes;
 
 pub mod cpu;
+mod debug;
 pub mod gdt;
 pub mod idt;
 pub mod io;
