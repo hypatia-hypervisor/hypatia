@@ -5,13 +5,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-/// # x86_64 recursive page map implementation
-///
-/// Hypatia uses recursive page tables with side-loading for
-/// address space inspection and manipulation.
+//! # x86_64 recursive page map implementation
+//!
+//! Hypatia uses recursive page tables with side-loading for
+//! address space inspection and manipulation.
+
 use crate::{Page, PageFrame, VPageAddr, HPA, PF1G, PF2M, PF4K, V1GA, V2MA, V4KA, V512GA};
 use bitflags::bitflags;
-use core::ops::RangeInclusive;
+use core::ops::Range;
 //use core::marker::PhantomData;    // XXX(cross): Not yet.
 use core::sync::atomic::{AtomicU64, Ordering};
 
@@ -32,11 +33,9 @@ bitflags! {
     }
 }
 
-///
 /// Page table entries are 64-bit integers, but we must be
 /// careful when accessing them, so we define them in terms
 /// of atomics.
-///
 #[repr(transparent)]
 pub struct PTE(AtomicU64);
 
@@ -134,26 +133,26 @@ impl core::fmt::Debug for PTE {
     }
 }
 
-pub trait Entry {}
+trait Entry {}
 
-pub enum L4E {
+enum L4E {
     Next(PTE),
 }
 impl Entry for L4E {}
 
-pub enum L3E {
+enum L3E {
     Next(PTE),
     Page(PF1G),
 }
 impl Entry for L3E {}
 
-pub enum L2E {
+enum L2E {
     Next(PTE),
     Page(PF2M),
 }
 impl Entry for L2E {}
 
-pub enum L1E {
+enum L1E {
     Page(PF4K),
 }
 impl Entry for L1E {}
@@ -170,7 +169,7 @@ impl Entry for L1E {}
 /// adajenct in the virtual mapping for the radix nodes, which
 /// is a very useful property.
 ///
-pub trait Level {
+trait Level {
     type EntryType: Entry;
     type VPageAddrType: VPageAddr + core::iter::Step;
     const BASE_ADDRESS: usize;
@@ -188,7 +187,8 @@ pub trait Level {
     fn decode(pte: PTE) -> Option<Self::EntryType>;
 
     fn pte_ref(va: usize) -> &'static PTE {
-        unsafe { &*(Self::BASE_ADDRESS as *const PTE).add(Self::index(va)) }
+        let addr = Self::BASE_ADDRESS + Self::index(va) * core::mem::size_of::<PTE>();
+        unsafe { &*(addr as *const PTE) }
     }
 
     fn entry(va: usize) -> Option<Self::EntryType> {
@@ -201,12 +201,18 @@ pub trait Level {
         entry.assign(pte);
     }
 
+    fn clear(va: usize) {
+        let entry = Self::pte_ref(va);
+        entry.clear();
+    }
+
     /// # Safety
     ///
     /// This is not safe.  It requires that some address space is side-loaded
     /// before calling.
     unsafe fn side_pte_ref(va: usize) -> &'static PTE {
-        &*(Self::SIDE_BASE_ADDRESS as *const PTE).add(Self::index(va))
+        let addr = Self::SIDE_BASE_ADDRESS + Self::index(va) * core::mem::size_of::<PTE>();
+        &*(addr as *const PTE)
     }
 
     /// # Safety
@@ -228,10 +234,16 @@ pub trait Level {
     }
 }
 
-pub enum Level4 {}
-pub enum Level3 {}
-pub enum Level2 {}
-pub enum Level1 {}
+enum Level4 {}
+enum Level3 {}
+enum Level2 {}
+enum Level1 {}
+
+impl Level4 {
+    #[cfg(test)]
+    const SELF_INDEX: usize = 511;
+    const SIDE_INDEX: usize = 510;
+}
 
 impl Level for Level4 {
     type EntryType = L4E;
@@ -302,12 +314,12 @@ impl Level for Level1 {
 }
 
 #[repr(C, align(4096))]
-pub struct PageTable {
+struct PageTable {
     entries: [PTE; 512],
 }
 
 impl PageTable {
-    pub fn is_empty(&self) -> bool {
+    pub fn _is_empty(&self) -> bool {
         self.entries.iter().all(|entry| entry.is_zero())
     }
 
@@ -360,13 +372,13 @@ pub fn translate_ptr<T>(p: *const T) -> HPA {
 pub fn translate(va: usize) -> HPA {
     match walk(va) {
         Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Next(_)), Some(L1E::Page(PF4K(hpa)))) => {
-            hpa.offset((va & <PF4K as PageFrame>::PageType::MASK) as u64)
+            hpa.offset(va & <PF4K as PageFrame>::PageType::MASK)
         }
         Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Page(PF2M(hpa))), _) => {
-            hpa.offset((va & <PF2M as PageFrame>::PageType::MASK) as u64)
+            hpa.offset(va & <PF2M as PageFrame>::PageType::MASK)
         }
         Walk(Some(_), Some(L3E::Page(PF1G(hpa))), _, _) => {
-            hpa.offset((va & <PF1G as PageFrame>::PageType::MASK) as u64)
+            hpa.offset(va & <PF1G as PageFrame>::PageType::MASK)
         }
         Walk(_, _, _, _) => HPA::new(0),
     }
@@ -379,6 +391,7 @@ where
     F: FnMut() -> Result<PF4K>,
 {
     let va = va.address();
+    assert!(va < Level1::SIDE_BASE_ADDRESS, "attempting to map in the recursive region");
     let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
 
     let w = walk(va);
@@ -402,38 +415,166 @@ where
     }
 }
 
-/// Creates paging structures corresponding to the given
-/// ranges of addresses.  Note that these are empty and don't
-/// map to anything, but if a call to this is successful, the
-/// radix tree for each range is fully constructed.
-pub fn make_ranges<F>(ranges: &[RangeInclusive<V4KA>], allocator: &mut F) -> Result<()>
+pub fn map_leaf(hpf: PF4K, va: V4KA, r: bool, w: bool, x: bool) -> Result<()> {
+    let flags = page_perm_flags(r, w, x);
+    let mut allocator = || Err("not a leaf");
+    map(hpf, flags, va, &mut allocator)
+}
+
+/// Unmaps the given virtual address in the current address space.
+/// Only clears the leaf entry, ignoring interior nodes.
+pub fn unmap(va: V4KA) {
+    let va = va.address();
+    if let Walk(Some(_), Some(_), Some(_), Some(_)) = walk(va) {
+        Level4::clear(va);
+    }
+}
+
+// Converts RWX permissions to page flags.
+fn page_perm_flags(r: bool, w: bool, x: bool) -> PTEFlags {
+    let mut flags = PTEFlags::empty();
+    if r {
+        flags.insert(PTEFlags::PRESENT);
+    }
+    if w {
+        flags.insert(PTEFlags::WRITE);
+    }
+    if !x {
+        flags.insert(PTEFlags::NX);
+    }
+    flags
+}
+
+// Makes the paging structures at a given level for the
+// specified regions and page permissions.
+fn make_ranges_level<L, F>(ranges: &[Range<V4KA>], allocator: &mut F) -> Result<()>
+where
+    F: FnMut() -> Result<PF4K>,
+    L: Level,
+{
+    for range in ranges.iter() {
+        let start = L::VPageAddrType::new_round_down(range.start.address());
+        let end = L::VPageAddrType::new_round_up(range.end.address());
+        assert!(
+            end.address() < Level1::SIDE_BASE_ADDRESS,
+            "attempting to map in the recursive region"
+        );
+        for addr in start..end {
+            let va = addr.address();
+            if L::entry(va).is_none() {
+                let pf = allocator()?;
+                L::set_entry(va, PTE::new(pf.pfa(), PTEFlags::WRITE | PTEFlags::PRESENT));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Creates paging structures corresponding to the given ranges
+/// of addresses in the current address space.  Note this merely
+/// creates the structures but they do not point to active pages
+/// after it completes.  It is assumed that the allocator
+/// returns zeroed pages.
+pub fn make_ranges<F>(ranges: &[Range<V4KA>], allocator: &mut F) -> Result<()>
 where
     F: FnMut() -> Result<PF4K>,
 {
-    fn make_ranges_level<L, F>(ranges: &[RangeInclusive<V4KA>], allocator: &mut F) -> Result<()>
+    make_ranges_level::<Level4, _>(ranges, allocator)?;
+    make_ranges_level::<Level3, _>(ranges, allocator)?;
+    make_ranges_level::<Level2, _>(ranges, allocator)?;
+    Ok(())
+}
+
+/// Creates paging structures corresponding to the given
+/// ranges of addresses in both the current and side-loaded
+/// address spaces, pointing to empty pages.  It is assumed
+/// that the allocator returns zeroed pages.
+pub fn make_shared_ranges<A>(ranges: &[Range<V4KA>], side: PF4K, allocator: &mut A) -> Result<PF4K>
+where
+    A: FnMut() -> Result<PF4K>,
+{
+    fn make_shared_ranges_level4<A>(ranges: &[Range<V4KA>], allocator: &mut A) -> Result<()>
     where
-        F: FnMut() -> Result<PF4K>,
-        L: Level,
+        A: FnMut() -> Result<PF4K>,
     {
-        let inner_flags: PTEFlags = PTEFlags::PRESENT | PTEFlags::WRITE;
-        for range in ranges.iter() {
-            let start = L::VPageAddrType::new_round_down(range.start().address());
-            let end = L::VPageAddrType::new_round_up(range.start().address());
+        for range in ranges {
+            let start = V512GA::new_round_down(range.start.address());
+            let end = V512GA::new_round_up(range.end.address());
+            assert!(
+                end.address() < Level1::SIDE_BASE_ADDRESS,
+                "attempting to map in the recursive region"
+            );
             for addr in start..end {
                 let va = addr.address();
-                if L::entry(va).is_none() {
-                    let entry = allocator()?;
-                    L::set_entry(va, PTE::new(entry.pfa(), inner_flags));
+                let entry = Level4::pte_ref(va);
+                if entry.is_zero() {
+                    let pf = allocator()?;
+                    entry.assign(PTE::new(pf.pfa(), PTEFlags::WRITE | PTEFlags::PRESENT));
+                }
+                unsafe {
+                    Level4::set_side_entry(va, entry.clone());
                 }
             }
         }
         Ok(())
     }
-    make_ranges_level::<Level4, _>(ranges, allocator)?;
+    let _tlb = TLBFlushGuard::new();
+    unsafe {
+        side_load(side)?;
+    }
+    make_shared_ranges_level4::<_>(ranges, allocator)?;
     make_ranges_level::<Level3, _>(ranges, allocator)?;
     make_ranges_level::<Level2, _>(ranges, allocator)?;
-    make_ranges_level::<Level1, _>(ranges, allocator)?;
+    unsafe { unload_side() }
+}
+
+/// unmaps a region by clearing its root level PTEs.  Only
+/// useful for segments and tasks.
+pub fn unmap_root_ranges(ranges: &[Range<V4KA>]) {
+    let _tlb = TLBFlushGuard::new();
+    for range in ranges {
+        let start = V512GA::new_round_down(range.start.address());
+        let end = V512GA::new_round_up(range.end.address());
+        for addr in start..end {
+            let entry = Level4::pte_ref(addr.address());
+            entry.clear();
+        }
+    }
+}
+
+/// Maps an address space in the side-load slot.
+///
+/// # Safety
+///
+/// This is not safe.  The side-loaded "address space" may not
+/// be an address space at all.
+pub unsafe fn side_load(pf: PF4K) -> Result<()> {
+    let _tlb = TLBFlushGuard::new();
+    let table = &mut *(Level4::BASE_ADDRESS as *mut PageTable);
+    table.entries[Level4::SIDE_INDEX] = PTE::new(pf.pfa(), PTEFlags::PRESENT | PTEFlags::WRITE);
     Ok(())
+}
+
+/// Unmaps a side-loaded address space.
+///
+/// # Safety
+///
+/// This is not safe.  The side-loaded address space may not
+/// loaded.
+pub unsafe fn unload_side() -> Result<PF4K> {
+    let _tlb = TLBFlushGuard::new();
+    let table = &mut *(Level4::BASE_ADDRESS as *mut PageTable);
+    let entry = table.entries[Level4::SIDE_INDEX].pfa();
+    table.entries[Level4::SIDE_INDEX].clear();
+    Ok(PF4K::new(entry))
+}
+
+/// Performs a TLB flush on the local CPU.
+pub fn flush_tlb() {
+    unsafe {
+        let cr3 = x86::controlregs::cr3();
+        x86::controlregs::cr3_write(cr3);
+    }
 }
 
 /// Perform a walk against a side-loaded page table.
@@ -484,13 +625,13 @@ unsafe fn side_walk(va: usize) -> Walk {
 pub unsafe fn side_translate(va: usize) -> HPA {
     match side_walk(va) {
         Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Next(_)), Some(L1E::Page(PF4K(hpa)))) => {
-            hpa.offset((va & <PF4K as PageFrame>::PageType::MASK) as u64)
+            hpa.offset(va & <PF4K as PageFrame>::PageType::MASK)
         }
         Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Page(PF2M(hpa))), _) => {
-            hpa.offset((va & <PF2M as PageFrame>::PageType::MASK) as u64)
+            hpa.offset(va & <PF2M as PageFrame>::PageType::MASK)
         }
         Walk(Some(_), Some(L3E::Page(PF1G(hpa))), _, _) => {
-            hpa.offset((va & <PF1G as PageFrame>::PageType::MASK) as u64)
+            hpa.offset(va & <PF1G as PageFrame>::PageType::MASK)
         }
         Walk(_, _, _, _) => HPA::new(0),
     }
@@ -527,7 +668,7 @@ where
         Level1::set_side_entry(va, PTE::new(hpf.pfa(), flags));
         Ok(())
     } else {
-        Err("Already mapped")
+        Err("Already side mapped")
     }
 }
 
@@ -538,9 +679,34 @@ pub fn address_space_root() -> HPA {
     table.root_address()
 }
 
+struct TLBFlushGuard {}
+impl TLBFlushGuard {
+    pub fn new() -> TLBFlushGuard {
+        TLBFlushGuard {}
+    }
+}
+impl Drop for TLBFlushGuard {
+    fn drop(&mut self) {
+        flush_tlb();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Level;
+
+    #[test]
+    fn level4_base() {
+        use super::Level4;
+        let base = !0usize << 48;
+        let base = base | Level4::SELF_INDEX << 39;
+        let base = base | Level4::SELF_INDEX << 30;
+        let base = base | Level4::SELF_INDEX << 21;
+        let side = base | Level4::SIDE_INDEX << 12;
+        let base = base | Level4::SELF_INDEX << 12;
+        assert_eq!(side, Level4::SIDE_BASE_ADDRESS);
+        assert_eq!(base, Level4::BASE_ADDRESS);
+    }
 
     #[test]
     fn level4_index() {
@@ -558,6 +724,18 @@ mod tests {
         assert_eq!(Level4::index(0xFFFF_8080_0000_0000), 257);
         assert_eq!(Level4::index(Level4::BASE_ADDRESS), 511);
         assert_eq!(Level4::index(Level4::SIDE_BASE_ADDRESS), 511);
+    }
+
+    #[test]
+    fn level3_base() {
+        use super::Level4;
+        let base = !0usize << 48;
+        let base = base | Level4::SELF_INDEX << 39;
+        let base = base | Level4::SELF_INDEX << 30;
+        let side = base | Level4::SIDE_INDEX << 21;
+        let base = base | Level4::SELF_INDEX << 21;
+        assert_eq!(side, super::Level3::SIDE_BASE_ADDRESS);
+        assert_eq!(base, super::Level3::BASE_ADDRESS);
     }
 
     #[test]
@@ -582,6 +760,17 @@ mod tests {
     }
 
     #[test]
+    fn level2_base() {
+        use super::Level4;
+        let base = !0usize << 48;
+        let base = base | Level4::SELF_INDEX << 39;
+        let side = base | Level4::SIDE_INDEX << 30;
+        let base = base | Level4::SELF_INDEX << 30;
+        assert_eq!(side, super::Level2::SIDE_BASE_ADDRESS);
+        assert_eq!(base, super::Level2::BASE_ADDRESS);
+    }
+
+    #[test]
     fn level2_index() {
         use super::Level2;
         const INDEX_BITS: usize = 27;
@@ -600,6 +789,16 @@ mod tests {
         assert_eq!(Level2::index(0xFFFF_8080_0000_0000), HALFWAY + 512 * 512);
         assert_eq!(Level2::index(0xFFFF_FFFF_FFFF_F000), UPPER - 1);
         assert_eq!(Level2::index(0xFFFF_FFFF_FFFF_E000), UPPER - 1);
+    }
+
+    #[test]
+    fn level1_base() {
+        use super::Level4;
+        let base = !0usize << 48;
+        let side = base | Level4::SIDE_INDEX << 39;
+        let base = base | Level4::SELF_INDEX << 39;
+        assert_eq!(side, super::Level1::SIDE_BASE_ADDRESS);
+        assert_eq!(base, super::Level1::BASE_ADDRESS);
     }
 
     #[test]
