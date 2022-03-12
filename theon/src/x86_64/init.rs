@@ -11,7 +11,7 @@ static mut IDT: arch::idt::IDT = arch::idt::IDT::empty();
 static mut GDT: arch::gdt::GDT = arch::gdt::GDT::empty();
 static mut TSS: arch::tss::TSS = arch::tss::TSS::empty();
 
-pub fn start(mbinfo_phys: u64) {
+pub(crate) fn start(mbinfo_phys: u64) -> multiboot1::Multiboot1 {
     uart::panic_println!("\nBooting Hypatia...");
     unsafe {
         arch::idt::IDT::init(&mut IDT, arch::trap::stubs());
@@ -19,5 +19,5 @@ pub fn start(mbinfo_phys: u64) {
         GDT = arch::gdt::GDT::new(&TSS);
         GDT.load();
     }
-    multiboot1::init(mbinfo_phys);
+    multiboot1::init(mbinfo_phys)
 }
