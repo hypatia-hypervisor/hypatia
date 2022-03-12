@@ -5,15 +5,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-use crate::theon::end_addr;
+use crate::theon;
 use crate::x86_64::memory;
 use alloc::vec::Vec;
 use multiboot::information::{MemoryManagement, MemoryType, Multiboot, PAddr};
 
-const THEON_ZERO: usize = 0xffff_8000_0000_0000;
-
 unsafe fn phys_to_slice(phys_addr: PAddr, len: usize) -> Option<&'static [u8]> {
-    let p = (THEON_ZERO + phys_addr as usize) as *const u8;
+    let p = (theon::VZERO + phys_addr as usize) as *const u8;
     Some(core::slice::from_raw_parts(p, len))
 }
 
@@ -35,9 +33,11 @@ impl MemoryManagement for MM {
     }
 }
 
+static mut MULTIBOOT_MM: MM = MM {};
+
 fn theon_region() -> memory::Region {
     let start = 0x0000_0000_0010_0000_u64;
-    let phys_end = (end_addr() - THEON_ZERO) as u64;
+    let phys_end = (theon::end_addr() - theon::VZERO) as u64;
     memory::Region { start, end: phys_end, typ: memory::Type::Loader }
 }
 
@@ -59,14 +59,14 @@ fn parse_memory(mb: &Multiboot) -> Option<Vec<memory::Region>> {
     )
 }
 
-struct MultibootModule<'a> {
+pub(crate) struct MultibootModule<'a> {
     pub bytes: &'a [u8],
     pub name: Option<&'a str>,
 }
 
 impl<'a> MultibootModule<'a> {
     fn region(&self) -> memory::Region {
-        let phys_start = self.bytes.as_ptr() as usize - THEON_ZERO;
+        let phys_start = self.bytes.as_ptr() as usize - theon::VZERO;
         let phys_end = phys_start.wrapping_add(self.bytes.len());
         memory::Region { start: phys_start as u64, end: phys_end as u64, typ: memory::Type::Module }
     }
@@ -83,27 +83,32 @@ fn parse_modules<'a>(mb: &'a Multiboot) -> Option<Vec<MultibootModule<'a>>> {
     )
 }
 
-pub fn init(mbinfo_phys: u64) {
-    uart::panic_println!("mbinfo: {:08x}", mbinfo_phys);
-    let mut mm = MM {};
-    let mb = unsafe { Multiboot::from_ptr(mbinfo_phys as PAddr, &mut mm).unwrap() };
+pub(crate) struct InitInfo<'a> {
+    pub memory_regions: Vec<memory::Region>,
+    pub regions: Vec<memory::Region>,
+    pub modules: Vec<MultibootModule<'a>>,
+}
 
-    uart::panic_println!("end = {:016x}", end_addr());
-    let (_memory_regions, regions, modules) = init_memory_regions(&mb);
-    uart::panic_println!("regions: {:#x?}", regions);
-    for module in modules {
-        if let Some("bin.a") = module.name {
-            uart::panic_println!("Found my binaries!");
-            let archive =
-                goblin::archive::Archive::parse(module.bytes).expect("cannot parse bin.a");
-            for member in archive.members() {
-                let bytes = archive.extract(member, module.bytes).expect("cannot extract elf");
-                let elf = goblin::elf::Elf::parse(bytes).expect("cannot parse elf");
-                uart::panic_println!("ELF for {:#?}: {:#x?}", member, elf);
-            }
-            uart::panic_println!("{:#x?}", archive);
-        }
+pub(crate) struct Multiboot1 {
+    multiboot: Multiboot<'static, 'static>,
+}
+
+impl Multiboot1 {
+    pub(crate) fn new(mbinfo_phys: u64) -> Multiboot1 {
+        let multiboot =
+            unsafe { Multiboot::from_ptr(mbinfo_phys as PAddr, &mut MULTIBOOT_MM).unwrap() };
+        Multiboot1 { multiboot }
     }
+
+    pub(crate) fn info(&self) -> InitInfo {
+        let (memory_regions, regions, modules) = init_memory_regions(&self.multiboot);
+        InitInfo { memory_regions, regions, modules }
+    }
+}
+
+pub(crate) fn init(mbinfo_phys: u64) -> Multiboot1 {
+    uart::panic_println!("mbinfo: {:08x}", mbinfo_phys);
+    Multiboot1::new(mbinfo_phys)
 }
 
 fn init_memory_regions<'a>(

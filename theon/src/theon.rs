@@ -14,3 +14,6 @@ pub(crate) fn end_addr() -> usize {
     }
     unsafe { end.as_ptr() as usize }
 }
+
+/// The start of Theon's virtual address space.
+pub(crate) const VZERO: usize = 0xFFFF_8000_0000_0000;

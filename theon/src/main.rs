@@ -21,7 +21,13 @@ mod x86_64;
 
 #[cfg_attr(not(test), start, no_mangle)]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
-    x86_64::init::start(mbinfo_phys);
+    let multiboot = x86_64::init::start(mbinfo_phys);
+    let crate::x86_64::multiboot1::InitInfo { memory_regions, regions, modules } = multiboot.info();
+    core::mem::drop(memory_regions);
+    uart::panic_println!("regions: {:#x?}", regions);
+    let bins = modules.iter().find(|m| m.name == Some("bin.a")).expect("found 'bin.a' in modules");
+    let archive = goblin::archive::Archive::parse(bins.bytes).expect("cannot parse bin.a");
+    uart::panic_println!("Binary archive: {:#x?}", archive);
     unsafe { core::arch::asm!("int3") };
     panic!("main: trapstubs = {:#x}", arch::trap::stubs as usize);
 }

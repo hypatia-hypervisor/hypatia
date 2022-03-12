@@ -5,9 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
+use core::cmp;
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug)]
-pub enum Type {
+pub(crate) enum Type {
     Reserved,
     RAM,
     Loader,
@@ -18,18 +20,16 @@ pub enum Type {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct Region {
+pub(crate) struct Region {
     pub start: u64,
     pub end: u64,
     pub typ: Type,
 }
 
-use core::cmp::Ordering;
-
 impl Region {
-    pub fn cmp(a: &Region, b: &Region) -> Ordering {
+    pub fn cmp(a: &Region, b: &Region) -> cmp::Ordering {
         match b.start.cmp(&a.start) {
-            Ordering::Equal => b.end.cmp(&a.end),
+            cmp::Ordering::Equal => b.end.cmp(&a.end),
             ordering => ordering,
         }
     }
