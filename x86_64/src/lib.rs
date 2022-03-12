@@ -51,6 +51,7 @@
 #![cfg_attr(not(test), no_std)]
 
 use core::convert::TryFrom;
+use core::fmt::Debug;
 use core::iter::Step;
 use zerocopy::FromBytes;
 
@@ -95,7 +96,7 @@ impl HPA {
     }
 
     #[must_use]
-    pub const fn offset(self, offset: u64) -> HPA {
+    pub const fn offset(self, offset: usize) -> HPA {
         HPA::new(self.0 + offset as u64)
     }
 }
@@ -110,10 +111,16 @@ pub trait Page {
     const MASK: usize = Self::SIZE - 1;
 
     fn vaddr(&self) -> Self::VPageAddrType;
+
+    fn frame(&self) -> Self::FrameType {
+        let addr = self.vaddr().address();
+        let pfa = vm::translate(addr);
+        Self::FrameType::new(pfa)
+    }
 }
 
-#[repr(C, align(4096))]
 #[derive(FromBytes)]
+#[repr(C, align(4096))]
 pub struct Page4K([u8; 4 * KIB]);
 
 impl Page4K {
@@ -176,26 +183,40 @@ impl Page for Page512G {
 
 pub trait PageFrame {
     type PageType: Page;
+    fn new(pfa: HPA) -> Self;
 }
 
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct PF512G(HPA);
 impl PageFrame for PF512G {
     type PageType = Page512G;
+    fn new(pfa: HPA) -> Self {
+        Self(pfa)
+    }
 }
 
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct PF1G(HPA);
 impl PageFrame for PF1G {
     type PageType = Page1G;
+    fn new(pfa: HPA) -> Self {
+        Self(pfa)
+    }
 }
 
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct PF2M(HPA);
 impl PageFrame for PF2M {
     type PageType = Page2M;
+    fn new(pfa: HPA) -> Self {
+        Self(pfa)
+    }
 }
 
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct PF4K(HPA);
 impl PF4K {
@@ -206,6 +227,9 @@ impl PF4K {
 
 impl PageFrame for PF4K {
     type PageType = Page4K;
+    fn new(pfa: HPA) -> Self {
+        Self(pfa)
+    }
 }
 
 /// Types implementing the VPageAddr trait represent page-aligned
@@ -213,7 +237,7 @@ impl PageFrame for PF4K {
 ///
 /// XXX(cross): It would be nice to generalize this somehow
 /// so that they weren't so specific to pages.
-pub trait VPageAddr: Sized {
+pub trait VPageAddr: Sized + Debug + Clone + Copy {
     type PageType: Page;
 
     fn new(va: usize) -> Self;
@@ -230,8 +254,8 @@ pub trait VPageAddr: Sized {
 }
 
 /// A type representing a 4KiB-aligned page address.
-#[repr(transparent)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
+#[repr(transparent)]
 pub struct V4KA(usize);
 
 impl VPageAddr for V4KA {
@@ -287,8 +311,9 @@ mod v4ka_tests {
     }
 }
 
-#[repr(transparent)]
+/// A type representation a 2MiB aligned address.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
+#[repr(transparent)]
 pub struct V2MA(usize);
 
 impl VPageAddr for V2MA {
@@ -323,8 +348,9 @@ impl Step for V2MA {
     }
 }
 
-#[repr(transparent)]
+/// A type representing a 1GiB aligned address.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
+#[repr(transparent)]
 pub struct V1GA(usize);
 
 impl VPageAddr for V1GA {
@@ -359,8 +385,9 @@ impl Step for V1GA {
     }
 }
 
-#[repr(transparent)]
+/// A type representing a 512GiB aligned address.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
+#[repr(transparent)]
 pub struct V512GA(usize);
 
 impl VPageAddr for V512GA {
