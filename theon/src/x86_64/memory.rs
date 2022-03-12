@@ -8,7 +8,7 @@
 use core::cmp;
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Type {
     Reserved,
     RAM,
