@@ -16,6 +16,7 @@
 extern crate alloc;
 
 mod allocator;
+mod theon;
 mod x86_64;
 
 #[cfg_attr(not(test), start, no_mangle)]

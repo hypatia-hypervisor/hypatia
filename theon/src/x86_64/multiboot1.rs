@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
+use crate::theon::end_addr;
 use crate::x86_64::memory;
 use alloc::vec::Vec;
 use multiboot::information::{MemoryManagement, MemoryType, Multiboot, PAddr};
@@ -14,13 +15,6 @@ const THEON_ZERO: usize = 0xffff_8000_0000_0000;
 unsafe fn phys_to_slice(phys_addr: PAddr, len: usize) -> Option<&'static [u8]> {
     let p = (THEON_ZERO + phys_addr as usize) as *const u8;
     Some(core::slice::from_raw_parts(p, len))
-}
-
-fn end_addr() -> usize {
-    extern "C" {
-        static end: [u8; 0];
-    }
-    unsafe { end.as_ptr() as usize }
 }
 
 struct MM;
