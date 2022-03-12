@@ -10,8 +10,14 @@ use core::cell::Cell;
 
 static mut HEAP: [u8; 4 * 1024 * 1024] = [0_u8; 4 * 1024 * 1024];
 
-struct BumpAlloc<'a> {
+pub(crate) struct BumpAlloc<'a> {
     heap: Cell<&'a mut [u8]>,
+}
+
+impl<'a> BumpAlloc<'a> {
+    pub fn new(arena: &'a mut [u8]) -> BumpAlloc<'a> {
+        BumpAlloc { heap: Cell::new(arena) }
+    }
 }
 
 unsafe impl GlobalAlloc for BumpAlloc<'_> {
