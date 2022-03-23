@@ -14,8 +14,9 @@
 |Global Area                   |
 |                              |  -4 TiB
 +------------------------------+
-|Per-CPU Area                  |
-|                              |  -5 TiB
+|(Reserved)                    |  -4 TiB - 512 GiB
++------------------------------+
+|Per-CPU/Node Area             |  -5 TiB
 +------------------------------+
 |Monitor                       |
 |                              |  -6 TiB
@@ -41,10 +42,10 @@
 |Task Set Upgrade Area         |
 |                              |  -13 TiB
 +------------------------------+
-|Task Upgrade Area             |
+|Task Set Area                 |
 |                              |  -14 TiB
 +------------------------------+
-|Task Set Area                 |
+|Task Upgrade Area             |
 |                              |  -15 TiB
 +------------------------------+
 |Task                          |

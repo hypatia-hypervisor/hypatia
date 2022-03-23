@@ -1,4 +1,5 @@
 .\" tbl mem.tbl | nroff -ms -Tascii | sed '/^$/d' > mem.txt
+.pl 12i
 .TS
 tab(,);
 | l | l.
@@ -18,8 +19,9 @@ _,
 Global Area,
 , -4 TiB
 _,
-Per-CPU/Node Area,
-, -5 TiB
+(Reserved), -4 TiB - 512 GiB
+_,
+Per-CPU/Node Area, -5 TiB
 _,
 Monitor,
 , -6 TiB
@@ -45,10 +47,10 @@ _,
 Task Set Upgrade Area,
 , -13 TiB
 _,
-Task Upgrade Area,
+Task Set Area,
 , -14 TiB
 _,
-Task Set Area,
+Task Upgrade Area,
 , -15 TiB
 _,
 Task,
