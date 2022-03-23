@@ -5,8 +5,57 @@
 Theon Boot Loader and Hypatia Boot Process
 ==========================================
 
-Describes the Theon boot loader and the process
-of starting Hypatia.
+Describes the Theon boot loader and the process of starting
+Hypatia.
+
+Introducing Theon
+-----------------
+
+Hypatia is distributed as a set of separately compiled and
+linked binary object files that are loaded and initialized at
+initial boot by Theon, a cold boot agent.  By design, the system
+as a whole is invoked by means of the hitless upgrade code path.
+Theon's job is to load the system and produce state that can be
+consumed by the upgrade path that will result in a freshly
+booted system "resuming" execution on a newly initialized
+system.
+
+It is assumed some minimal early loader will load the Theon
+binary and a Unix archive file containing the Hypatia binaries
+into memory, then invoke Theon, passing it a reference to the
+binary archive.
+
+Theon is responsible for three things:
+
+* Extracting and loading the Hypatia binaries into memory,
+  invoking segment initializers, and producing task binary
+  descriptions,
+* Examining the host computer and creating descriptions of its
+  hardware resources that can be serialized and passed to the
+  rest of the system,
+* Hand-crafting a minimal snapshot of system state sufficient to
+  schedule the system task, resuming at its entry point, on
+  system resumption.
+
+The manner in which Theon accomplishes all three of these is
+deliberately opaque to the rest of the system, which gives the
+loader implementation flexibility.  However, once complete,
+Theon serializes the state it has just created, and invokes the
+rest of the system by passing that serialized state to the
+upgrade path of the system supervisor.  On upgrade, the
+supervisor is responsible for seeding the rest of the system's
+components with whatever state it was passed.  In this manner,
+we effectively always enter the hypervisor via the upgrade path,
+even in the cold start case; this avoids special cases and
+simplifies testing and implementation.  Further, complicated
+and necessarily messy bootstrap logic is confined to a single
+subsystem: Theon itself.
+
+On advanced systems with minimal firmware, for example, complex
+system-specific logic like CPU topology discovery or PCIe BAR
+assignment can be restricted to Theon, while the rest of the
+system relies on the contract Theon honors in providing an
+accurate view of system resources.
 
 Colophon
 --------
