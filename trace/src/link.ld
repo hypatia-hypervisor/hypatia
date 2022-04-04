@@ -14,22 +14,28 @@ SECTIONS {
 
 	.text . :
 	{
-		*(.text.boot)
-		*(.text)
+		*(.text*)
 	}
 	. = ALIGN(4096);
 	PROVIDE(etext = .);
 
 	.rodata . :
 	{
-		*(.rodata)
+		*(.rodata*)
 	}
 	. = ALIGN(4096);
 	PROVIDE(erodata = .);
 
+	.got . :
+	{
+		*(.got*)
+	}
+	. = ALIGN(4096);
+
 	.data . :
 	{
-		*(.data)
+		*(.data*)
+		*(.got*)
 	}
 	. = ALIGN(4096);
 	PROVIDE(edata = .);
@@ -40,6 +46,5 @@ SECTIONS {
 		*(COMMON)
 	}
 	. = ALIGN(4096);
-
 	PROVIDE(end = .);
 }
