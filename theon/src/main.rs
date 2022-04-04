@@ -117,8 +117,8 @@ const BINARY_TABLE: &[BinaryMeta] = &[
     ("monitor", load_addr(3), BinaryType::Segment),
     ("scheduler", load_addr(4), BinaryType::Segment),
     ("supervisor", load_addr(5), BinaryType::Segment),
-    ("system", load_addr(6), BinaryType::Segment),
-    ("trace", load_addr(7), BinaryType::Segment),
+    ("trace", load_addr(6), BinaryType::Segment),
+    ("system", load_addr(7), BinaryType::Task),
     ("vcpu", load_addr(8), BinaryType::Task),
     ("vm", load_addr(9), BinaryType::Task),
 ];
@@ -241,7 +241,13 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
             arch::vm::map_leaf(page.frame(), addr, r, w, x).expect("mapped a page");
         }
     }
-    arch::vm::unmap_root_ranges(&regions);
+    if let BinaryType::Task = typ {
+        arch::vm::unmap_root_ranges(&regions);
+    } else {
+        let entry = elf.entry as usize;
+        let init = unsafe { core::mem::transmute::<_, fn()>(entry) };
+        init();
+    }
     Ok(root)
 }
 
