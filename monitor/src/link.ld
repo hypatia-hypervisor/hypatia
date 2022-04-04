@@ -7,29 +7,34 @@
  * https://opensource.org/licenses/MIT.
  */
 
-ENTRY(main)
+ENTRY(init)
 
 SECTIONS {
 	. = 0xFFFFFA0000000000;
 
 	.text . :
 	{
-		*(.text.boot)
-		*(.text)
+		*(.text*)
 	}
 	. = ALIGN(4096);
 	PROVIDE(etext = .);
 
 	.rodata . :
 	{
-		*(.rodata)
+		*(.rodata*)
 	}
 	. = ALIGN(4096);
 	PROVIDE(erodata = .);
 
+	.got . :
+	{
+		*(.got*)
+	}
+	. = ALIGN(4096);
+
 	.data . :
 	{
-		*(.data)
+		*(.data*)
 	}
 	. = ALIGN(4096);
 	PROVIDE(edata = .);
@@ -40,6 +45,5 @@ SECTIONS {
 		*(COMMON)
 	}
 	. = ALIGN(4096);
-
 	PROVIDE(end = .);
 }

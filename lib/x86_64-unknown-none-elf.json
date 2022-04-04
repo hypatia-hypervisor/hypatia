@@ -9,6 +9,8 @@
 	"arch": "x86_64",
 	"os": "none",
 	"executables": true,
+	"relocation-model": "pie",
+	"code-model": "small",
 	"disable-redzone": true,
 	"features": "-mmx,-sse,+soft-float",
 	"panic-strategy": "abort",
