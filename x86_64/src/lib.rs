@@ -48,6 +48,7 @@
 #![feature(assert_matches)]
 #![feature(naked_functions)]
 #![feature(step_trait)]
+#![feature(strict_provenance)]
 #![cfg_attr(not(test), no_std)]
 
 use core::convert::TryFrom;
