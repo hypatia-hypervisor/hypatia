@@ -162,8 +162,8 @@ pub extern "C" fn main(mbinfo_phys: u64) -> ! {
 fn theon_fits(regions: &[Region]) -> bool {
     assert!(theon::end_addr() < theon::vaddr(BINARY_LOAD_REGION_START));
     for region in regions.iter().filter(|&r| r.typ == Type::RAM) {
-        if region.start <= BINARY_LOAD_REGION_START.address()
-            && BINARY_LOAD_REGION_END.address() <= region.end
+        if region.start <= BINARY_LOAD_REGION_START.addr()
+            && BINARY_LOAD_REGION_END.addr() <= region.end
         {
             return true;
         }
@@ -233,7 +233,7 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
             let page = allocate().expect("allocated data page");
             if !src.is_empty() {
                 let len = usize::min(src.len(), Page4K::SIZE);
-                let dst = page.vaddr().address() as *mut u8;
+                let dst = page.vaddr().addr() as *mut u8;
                 unsafe {
                     core::ptr::copy_nonoverlapping(src.as_ptr(), dst, len);
                 }

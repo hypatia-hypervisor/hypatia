@@ -47,8 +47,8 @@ impl PTE {
     /// TODO(cross): Extend this to be generic over the
     /// physical frame types defined in lib.rs.
     pub fn new(hpa: HPA, flags: PTEFlags) -> PTE {
-        let address = hpa.address() & Self::PFA_MASK;
-        assert_eq!(hpa.address(), address);
+        let address = hpa.addr() & Self::PFA_MASK;
+        assert_eq!(hpa.addr(), address);
         PTE(AtomicU64::new(address | flags.bits()))
     }
 
@@ -121,7 +121,7 @@ impl core::fmt::Debug for PTE {
             }
         };
         f.write_str(flag_or(PTEFlags::NX, "-", "X"))?;
-        f.write_fmt(format_args!(":{:#x?}:", self.pfa().address()))?;
+        f.write_fmt(format_args!(":{:#x?}:", self.pfa().addr()))?;
         f.write_str(flag_or(PTEFlags::GLOBAL, "G", "-"))?;
         f.write_str(flag_or(PTEFlags::HUGE, "H", "-"))?;
         f.write_str(flag_or(PTEFlags::DIRTY, "D", "-"))?;
@@ -323,7 +323,7 @@ impl PageTable {
         self.entries.iter().all(|entry| entry.is_zero())
     }
 
-    pub fn root_address(&self) -> HPA {
+    pub fn root_addr(&self) -> HPA {
         translate_ptr(self)
     }
 }
@@ -390,7 +390,7 @@ pub fn map<F>(hpf: PF4K, flags: PTEFlags, va: V4KA, allocator: &mut F) -> Result
 where
     F: FnMut() -> Result<PF4K>,
 {
-    let va = va.address();
+    let va = va.addr();
     assert!(va < Level1::SIDE_BASE_ADDRESS, "attempting to map in the recursive region");
     let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
 
@@ -424,7 +424,7 @@ pub fn map_leaf(hpf: PF4K, va: V4KA, r: bool, w: bool, x: bool) -> Result<()> {
 /// Unmaps the given virtual address in the current address space.
 /// Only clears the leaf entry, ignoring interior nodes.
 pub fn unmap(va: V4KA) {
-    let va = va.address();
+    let va = va.addr();
     if let Walk(Some(_), Some(_), Some(_), Some(_)) = walk(va) {
         Level4::clear(va);
     }
@@ -453,14 +453,14 @@ where
     L: Level,
 {
     for range in ranges.iter() {
-        let start = L::VPageAddrType::new_round_down(range.start.address());
-        let end = L::VPageAddrType::new_round_up(range.end.address());
+        let start = L::VPageAddrType::new_round_down(range.start.addr());
+        let end = L::VPageAddrType::new_round_up(range.end.addr());
         assert!(
-            end.address() < Level1::SIDE_BASE_ADDRESS,
+            end.addr() < Level1::SIDE_BASE_ADDRESS,
             "attempting to map in the recursive region"
         );
         for addr in start..end {
-            let va = addr.address();
+            let va = addr.addr();
             if L::entry(va).is_none() {
                 let pf = allocator()?;
                 L::set_entry(va, PTE::new(pf.pfa(), PTEFlags::WRITE | PTEFlags::PRESENT));
@@ -498,14 +498,14 @@ where
         A: FnMut() -> Result<PF4K>,
     {
         for range in ranges {
-            let start = V512GA::new_round_down(range.start.address());
-            let end = V512GA::new_round_up(range.end.address());
+            let start = V512GA::new_round_down(range.start.addr());
+            let end = V512GA::new_round_up(range.end.addr());
             assert!(
-                end.address() < Level1::SIDE_BASE_ADDRESS,
+                end.addr() < Level1::SIDE_BASE_ADDRESS,
                 "attempting to map in the recursive region"
             );
             for addr in start..end {
-                let va = addr.address();
+                let va = addr.addr();
                 let entry = Level4::pte_ref(va);
                 if entry.is_zero() {
                     let pf = allocator()?;
@@ -533,10 +533,10 @@ where
 pub fn unmap_root_ranges(ranges: &[Range<V4KA>]) {
     let _tlb = TLBFlushGuard::new();
     for range in ranges {
-        let start = V512GA::new_round_down(range.start.address());
-        let end = V512GA::new_round_up(range.end.address());
+        let start = V512GA::new_round_down(range.start.addr());
+        let end = V512GA::new_round_up(range.end.addr());
         for addr in start..end {
-            let entry = Level4::pte_ref(addr.address());
+            let entry = Level4::pte_ref(addr.addr());
             entry.clear();
         }
     }
@@ -648,7 +648,7 @@ pub unsafe fn side_map<F>(hpf: PF4K, flags: PTEFlags, va: V4KA, allocator: &mut 
 where
     F: FnMut() -> Result<PF4K>,
 {
-    let va = va.address();
+    let va = va.addr();
     let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
 
     let w = side_walk(va);
@@ -676,7 +676,7 @@ where
 /// the currently loaded address space.
 pub fn address_space_root() -> HPA {
     let table = unsafe { &*(Level4::BASE_ADDRESS as *const PageTable) };
-    table.root_address()
+    table.root_addr()
 }
 
 struct TLBFlushGuard {}
