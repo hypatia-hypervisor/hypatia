@@ -92,7 +92,7 @@ impl HPA {
     }
 
     /// Returns the address of this HPA as a u64.
-    pub const fn address(self) -> u64 {
+    pub const fn addr(self) -> u64 {
         self.0
     }
 
@@ -114,7 +114,7 @@ pub trait Page {
     fn vaddr(&self) -> Self::VPageAddrType;
 
     fn frame(&self) -> Self::FrameType {
-        let addr = self.vaddr().address();
+        let addr = self.vaddr().addr();
         let pfa = vm::translate(addr);
         Self::FrameType::new(pfa)
     }
@@ -251,7 +251,7 @@ pub trait VPageAddr: Sized + Debug + Clone + Copy {
         Self::new(va.wrapping_add(Self::PageType::MASK) & !Self::PageType::MASK)
     }
 
-    fn address(self) -> usize;
+    fn addr(self) -> usize;
 }
 
 /// A type representing a 4KiB-aligned page address.
@@ -267,7 +267,7 @@ impl VPageAddr for V4KA {
         V4KA(va)
     }
 
-    fn address(self) -> usize {
+    fn addr(self) -> usize {
         self.0
     }
 }
@@ -302,7 +302,7 @@ mod v4ka_tests {
         assert_eq!(V4KA::steps_between(&start, &end), Some(0));
 
         let end = V4KA::new_round_up(1);
-        assert_eq!(end.address(), 4096);
+        assert_eq!(end.addr(), 4096);
         assert_eq!(V4KA::steps_between(&start, &end), Some(1));
 
         let end = V4KA::new(16 * KIB);
@@ -325,7 +325,7 @@ impl VPageAddr for V2MA {
         V2MA(va)
     }
 
-    fn address(self) -> usize {
+    fn addr(self) -> usize {
         self.0
     }
 }
@@ -362,7 +362,7 @@ impl VPageAddr for V1GA {
         V1GA(va)
     }
 
-    fn address(self) -> usize {
+    fn addr(self) -> usize {
         self.0
     }
 }
@@ -399,7 +399,7 @@ impl VPageAddr for V512GA {
         V512GA(va)
     }
 
-    fn address(self) -> usize {
+    fn addr(self) -> usize {
         self.0
     }
 }

@@ -23,5 +23,5 @@ pub(crate) const VZERO: usize = 0xFFFF_8000_0000_0000;
 /// Returns the raw virtual address of the given HPA relative
 /// to  theon's address space.
 pub(crate) const fn vaddr(hpa: HPA) -> usize {
-    hpa.address() as usize + VZERO
+    hpa.addr() as usize + VZERO
 }
