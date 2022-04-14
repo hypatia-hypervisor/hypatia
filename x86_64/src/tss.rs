@@ -87,7 +87,7 @@ impl TSS {
     }
 
     pub fn set_stack(&mut self, index: StackIndex, stack: &mut HyperStack) {
-        let va = stack.top() as u64;
+        let va = stack.top().addr() as u64;
         let lower = va as u32;
         let upper = (va >> 32) as u32;
         match index {
@@ -128,7 +128,7 @@ impl TSS {
 
     /// Returns a fully-formed TSS descriptor for this TSS.
     pub fn descriptor(&self) -> segment::TaskStateDescriptor {
-        let va = self as *const _ as u64;
+        let va = (self as *const Self).addr() as u64;
         segment::TaskStateDescriptor::empty()
             .with_limit0(core::mem::size_of::<TSS>() as u16 - 1)
             .with_base0(va.get_bits(0..16) as u16)

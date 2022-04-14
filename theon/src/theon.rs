@@ -14,7 +14,7 @@ pub(crate) fn end_addr() -> usize {
     extern "C" {
         static end: [u8; 0];
     }
-    unsafe { end.as_ptr() as usize }
+    unsafe { end.as_ptr().addr() }
 }
 
 /// The start of Theon's virtual address space.
