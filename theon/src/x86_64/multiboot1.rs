@@ -66,7 +66,7 @@ pub(crate) struct MultibootModule<'a> {
 
 impl<'a> MultibootModule<'a> {
     fn region(&self) -> memory::Region {
-        let phys_start = self.bytes.as_ptr() as usize - theon::VZERO;
+        let phys_start = self.bytes.as_ptr().addr() - theon::VZERO;
         let phys_end = phys_start.wrapping_add(self.bytes.len());
         memory::Region { start: phys_start as u64, end: phys_end as u64, typ: memory::Type::Module }
     }

@@ -137,7 +137,7 @@ impl Page for Page4K {
     type VPageAddrType = V4KA;
 
     fn vaddr(&self) -> V4KA {
-        V4KA(self.0.as_ptr() as usize)
+        V4KA(self.0.as_ptr().addr())
     }
 }
 
@@ -149,7 +149,7 @@ impl Page for Page2M {
     type VPageAddrType = V2MA;
 
     fn vaddr(&self) -> V2MA {
-        V2MA(self.0.as_ptr() as usize)
+        V2MA(self.0.as_ptr().addr())
     }
 }
 
@@ -164,7 +164,7 @@ impl Page for Page1G {
     type VPageAddrType = V1GA;
 
     fn vaddr(&self) -> V1GA {
-        V1GA(self.0.as_ptr() as usize)
+        V1GA(self.0.as_ptr().addr())
     }
 }
 
@@ -178,7 +178,7 @@ impl Page for Page512G {
     type VPageAddrType = V512GA;
 
     fn vaddr(&self) -> V512GA {
-        V512GA(self.0.as_ptr() as usize)
+        V512GA(self.0.as_ptr().addr())
     }
 }
 

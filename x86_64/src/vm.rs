@@ -336,7 +336,7 @@ struct Walk(Option<L4E>, Option<L3E>, Option<L2E>, Option<L1E>);
 /// pointer in the current address space.
 #[allow(dead_code)]
 fn walk_ptr<T>(p: *const T) -> Walk {
-    walk(p as usize)
+    walk(p.addr())
 }
 
 fn walk(va: usize) -> Walk {
@@ -366,7 +366,7 @@ fn walk(va: usize) -> Walk {
 /// Translates the virtual address of the given pointer in the current
 /// address space to a host physical address.
 pub fn translate_ptr<T>(p: *const T) -> HPA {
-    translate(p as usize)
+    translate(p.addr())
 }
 
 pub fn translate(va: usize) -> HPA {
