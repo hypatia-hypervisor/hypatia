@@ -157,7 +157,8 @@ fn dist(profile: Build) -> Result<()> {
         .arg(format!("target/{}/{}/theon", target(), profile.dir()))
         .arg(format!("target/{}/{}/theon.elf32", target(), profile.dir()))
         .current_dir(workspace())
-        .status()?;
+        .status()
+        .map_err(|e| format!("objcopy failed. Have you installed llvm? {e}"))?;
     if !status.success() {
         return Err("objcopy failed".into());
     }
@@ -221,7 +222,8 @@ fn qemu(profile: Build) -> Result<()> {
         .arg("-initrd")
         .arg(arname())
         .current_dir(workspace())
-        .status()?;
+        .status()
+        .map_err(|e| format!("qemu failed. Have you installed qemu-system-x86? {e}"))?;
     if !status.success() {
         return Err("qemu failed".into());
     }
