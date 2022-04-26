@@ -11,11 +11,10 @@
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
+libhypatia::define_segment!();
+
 #[no_mangle]
 #[start]
 pub extern "C" fn init() {
     uart::panic_println!("Hi from the monitor");
 }
-
-#[cfg(not(test))]
-mod runtime;

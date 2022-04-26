@@ -11,8 +11,7 @@
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
-#[cfg(not(test))]
-mod runtime;
+libhypatia::define_segment!();
 
 use arch::Page4K;
 
