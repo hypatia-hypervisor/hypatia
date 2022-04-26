@@ -13,11 +13,10 @@
 
 use arch::io::Sender;
 
+libhypatia::define_segment!();
+
 #[cfg_attr(not(test), start, no_mangle)]
-pub extern "C" fn main() {
+pub extern "C" fn init() {
     let mut port = arch::io::OutPort::new(0x3f8);
     port.send(b'a');
 }
-
-#[cfg(not(test))]
-mod runtime;
