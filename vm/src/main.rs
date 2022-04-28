@@ -13,10 +13,10 @@
 
 mod x86_64;
 
-libhypatia::define_segment!();
+libhypatia::define_task!();
 
-#[cfg_attr(not(test), start, no_mangle)]
-pub extern "C" fn init() {
+#[cfg_attr(not(test),no_mangle,start)]
+fn main() {
     unsafe {
         core::arch::asm!("movl $0xcafef00d, %eax", options(att_syntax));
     }

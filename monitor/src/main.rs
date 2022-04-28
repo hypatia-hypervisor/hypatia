@@ -11,10 +11,11 @@
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
-libhypatia::define_segment!();
+libhypatia::define_segment!(init);
 
+// XXX(mikew): For some reason, removing this no_mangle on this init in particular causes
+// initialization to hang.
 #[no_mangle]
-#[start]
-pub extern "C" fn init() {
+fn init() {
     uart::panic_println!("Hi from the monitor");
 }

@@ -11,7 +11,7 @@
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
-libhypatia::define_segment!();
+libhypatia::define_task!();
 
 #[start]
-pub extern "C" fn init() {}
+pub extern "C" fn main() {}

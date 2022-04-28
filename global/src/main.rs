@@ -11,7 +11,7 @@
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 
-libhypatia::define_segment!();
+libhypatia::define_segment!(init);
 
 use arch::Page4K;
 
@@ -22,7 +22,6 @@ pub fn zero_page() -> &'static Page4K {
 }
 
 /// Initialize the system.
-#[start]
-pub extern "C" fn init() {
+fn init() {
     zero_page();
 }
