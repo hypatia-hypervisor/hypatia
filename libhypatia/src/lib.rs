@@ -9,7 +9,7 @@
 #![cfg_attr(test, allow(dead_code))]
 #![cfg_attr(not(test), no_std)]
 
-pub mod segment;
+pub mod runtime;
 pub mod panic;
 mod x86_64;
 
