@@ -15,7 +15,7 @@ pub(crate) fn start(mbinfo_phys: u64) -> multiboot1::Multiboot1 {
     uart::panic_println!("\nBooting Hypatia...");
     unsafe {
         arch::idt::IDT::init(&mut IDT, arch::trap::stubs());
-        IDT.load();
+        arch::idt::IDT::load(&IDT);
         GDT = arch::gdt::GDT::new(&TSS);
         GDT.load();
     }

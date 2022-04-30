@@ -48,8 +48,7 @@ impl IDT {
     ///
     /// Early code assumes a good stack and resets the IDT pointer
     /// on the local processor.
-    pub unsafe fn load(&mut self) {
-        let base = (self as *mut Self).addr() as u64;
+    pub unsafe fn load(idt: &'static IDT) {
         const LIMIT: u16 = (core::mem::size_of::<IDT>() - 1) as u16;
         core::arch::asm!(r#"
             subq $16, %rsp;
@@ -58,7 +57,7 @@ impl IDT {
             lidt 6(%rsp);
             addq $16, %rsp;
             "#,
-            base = in(reg) base, LIMIT = const LIMIT,
+            base = in(reg) idt, LIMIT = const LIMIT,
             options(att_syntax));
     }
 }
