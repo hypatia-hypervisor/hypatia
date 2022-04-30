@@ -89,7 +89,7 @@ macro_rules! gen_trap_stub {
         gen_stub!(17, err)
     };
     // No hardware error
-    ($num:expr) => {
+    ($num:literal) => {
         gen_stub!($num)
     };
 }
