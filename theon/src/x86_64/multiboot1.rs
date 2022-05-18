@@ -12,14 +12,14 @@ use multiboot::information::{MemoryManagement, MemoryType, Multiboot, PAddr};
 
 unsafe fn phys_to_slice(phys_addr: PAddr, len: usize) -> Option<&'static [u8]> {
     let p = (theon::VZERO + phys_addr as usize) as *const u8;
-    Some(core::slice::from_raw_parts(p, len))
+    Some(unsafe { core::slice::from_raw_parts(p, len) })
 }
 
 struct MM;
 
 impl MemoryManagement for MM {
     unsafe fn paddr_to_slice(&self, phys_addr: PAddr, len: usize) -> Option<&'static [u8]> {
-        phys_to_slice(phys_addr, len)
+        unsafe { phys_to_slice(phys_addr, len) }
     }
 
     unsafe fn allocate(&mut self, _len: usize) -> Option<(PAddr, &mut [u8])> {

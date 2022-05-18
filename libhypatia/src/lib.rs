@@ -8,6 +8,7 @@
 #![feature(strict_provenance)]
 #![cfg_attr(test, allow(dead_code))]
 #![cfg_attr(not(test), no_std)]
+#![forbid(unsafe_op_in_unsafe_fn)]
 
 pub mod runtime;
 pub mod panic;
