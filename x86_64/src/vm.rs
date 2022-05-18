@@ -212,7 +212,7 @@ trait Level {
     /// before calling.
     unsafe fn side_pte_ref(va: usize) -> &'static PTE {
         let addr = Self::SIDE_BASE_ADDRESS + Self::index(va) * core::mem::size_of::<PTE>();
-        &*(addr as *const PTE)
+        unsafe { &*(addr as *const PTE) }
     }
 
     /// # Safety
@@ -220,7 +220,7 @@ trait Level {
     /// This is not safe.  It requires that some address space is side-loaded
     /// before calling.
     unsafe fn side_entry(va: usize) -> Option<Self::EntryType> {
-        let pte = Self::side_pte_ref(va).clone();
+        let pte = unsafe { Self::side_pte_ref(va).clone() };
         Self::decode(pte)
     }
 
@@ -229,7 +229,7 @@ trait Level {
     /// This is not safe.  It requires that some address space is side-loaded
     /// before calling.
     unsafe fn set_side_entry(va: usize, pte: PTE) {
-        let entry = Self::side_pte_ref(va);
+        let entry = unsafe { Self::side_pte_ref(va) };
         entry.assign(pte);
     }
 }
@@ -550,7 +550,7 @@ pub fn unmap_root_ranges(ranges: &[Range<V4KA>]) {
 /// be an address space at all.
 pub unsafe fn side_load(pf: PF4K) -> Result<()> {
     let _tlb = TLBFlushGuard::new();
-    let table = &mut *(Level4::BASE_ADDRESS as *mut PageTable);
+    let table = unsafe { &mut *(Level4::BASE_ADDRESS as *mut PageTable) };
     table.entries[Level4::SIDE_INDEX] = PTE::new(pf.pfa(), PTEFlags::PRESENT | PTEFlags::WRITE);
     Ok(())
 }
@@ -563,7 +563,7 @@ pub unsafe fn side_load(pf: PF4K) -> Result<()> {
 /// loaded.
 pub unsafe fn unload_side() -> Result<PF4K> {
     let _tlb = TLBFlushGuard::new();
-    let table = &mut *(Level4::BASE_ADDRESS as *mut PageTable);
+    let table = unsafe { &mut *(Level4::BASE_ADDRESS as *mut PageTable) };
     let entry = table.entries[Level4::SIDE_INDEX].pfa();
     table.entries[Level4::SIDE_INDEX].clear();
     Ok(PF4K::new(entry))
@@ -588,25 +588,25 @@ pub fn flush_tlb() {
 /// XXX(cross): We should figure out some way to at least improve
 /// safety here.
 unsafe fn side_walk(va: usize) -> Walk {
-    let pt4e = Level4::side_entry(va);
+    let pt4e = unsafe { Level4::side_entry(va) };
     match pt4e {
         Some(_) => {}
         _ => return Walk(pt4e, None, None, None),
     }
 
-    let pt3e = Level3::side_entry(va);
+    let pt3e = unsafe { Level3::side_entry(va) };
     match pt3e {
         Some(L3E::Next(_)) => {}
         _ => return Walk(pt4e, pt3e, None, None),
     }
 
-    let pt2e = Level2::side_entry(va);
+    let pt2e = unsafe { Level2::side_entry(va) };
     match pt2e {
         Some(L2E::Next(_)) => {}
         _ => return Walk(pt4e, pt3e, pt2e, None),
     }
 
-    let pt1e = Level1::side_entry(va);
+    let pt1e = unsafe { Level1::side_entry(va) };
 
     Walk(pt4e, pt3e, pt2e, pt1e)
 }
@@ -623,7 +623,7 @@ unsafe fn side_walk(va: usize) -> Walk {
 /// XXX(cross): We should figure out some way to at least improve
 /// safety here.
 pub unsafe fn side_translate(va: usize) -> HPA {
-    match side_walk(va) {
+    match unsafe { side_walk(va) } {
         Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Next(_)), Some(L1E::Page(PF4K(hpa)))) => {
             hpa.offset(va & <PF4K as PageFrame>::PageType::MASK)
         }
@@ -651,21 +651,29 @@ where
     let va = va.addr();
     let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
 
-    let w = side_walk(va);
+    let w = unsafe { side_walk(va) };
     if let Walk(None, _, _, _) = w {
         let pml4e = allocator()?;
-        Level4::set_side_entry(va, PTE::new(pml4e.pfa(), inner_flags));
+        unsafe {
+            Level4::set_side_entry(va, PTE::new(pml4e.pfa(), inner_flags));
+        }
     }
     if let Walk(_, None, _, _) = w {
         let pml3e = allocator()?;
-        Level3::set_side_entry(va, PTE::new(pml3e.pfa(), inner_flags));
+        unsafe {
+            Level3::set_side_entry(va, PTE::new(pml3e.pfa(), inner_flags));
+        }
     }
     if let Walk(_, _, None, _) = w {
         let pml2e = allocator()?;
-        Level2::set_side_entry(va, PTE::new(pml2e.pfa(), inner_flags));
+        unsafe {
+            Level2::set_side_entry(va, PTE::new(pml2e.pfa(), inner_flags));
+        }
     }
     if let Walk(_, _, _, None) = w {
-        Level1::set_side_entry(va, PTE::new(hpf.pfa(), flags));
+        unsafe {
+            Level1::set_side_entry(va, PTE::new(hpf.pfa(), flags));
+        }
         Ok(())
     } else {
         Err("Already side mapped")

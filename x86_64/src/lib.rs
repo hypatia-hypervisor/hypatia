@@ -50,6 +50,7 @@
 #![feature(step_trait)]
 #![feature(strict_provenance)]
 #![cfg_attr(not(test), no_std)]
+#![forbid(unsafe_op_in_unsafe_fn)]
 
 use core::convert::TryFrom;
 use core::fmt::Debug;

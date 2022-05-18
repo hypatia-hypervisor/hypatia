@@ -82,13 +82,15 @@ impl GDT {
     unsafe fn lgdt(&self) {
         let base = u64::try_from((self as *const Self).addr()).unwrap();
         const LIMIT: u16 = core::mem::size_of::<GDT>() as u16 - 1;
-        asm!(r#"
-            subq $16, %rsp;
-            movq {}, 8(%rsp);
-            movw ${}, 6(%rsp);
-            lgdt 6(%rsp);
-            addq $16, %rsp;
-            "#, in(reg) base, const LIMIT, options(att_syntax));
+        unsafe {
+            asm!(r#"
+                subq $16, %rsp;
+                movq {}, 8(%rsp);
+                movw ${}, 6(%rsp);
+                lgdt 6(%rsp);
+                addq $16, %rsp;
+                "#, in(reg) base, const LIMIT, options(att_syntax));
+        }
     }
 
     /// Loads the %tr register with a selector referring to a GDT's
@@ -100,7 +102,9 @@ impl GDT {
     /// ensures that a valid GDT with a task descriptor in the correct
     /// position is loaded before this is invoked.
     unsafe fn ltr(selector: u16) {
-        asm!("ltr {:x};", in(reg) selector);
+        unsafe {
+            asm!("ltr {:x};", in(reg) selector);
+        }
     }
 
     /// Loads this GDT and sets the task register to refer to its
@@ -110,7 +114,9 @@ impl GDT {
     ///
     /// Must be called on a valid, initialized GDT.
     pub unsafe fn load(&self) {
-        self.lgdt();
-        Self::ltr(Self::task_selector());
+        unsafe {
+            self.lgdt();
+            Self::ltr(Self::task_selector());
+        }
     }
 }

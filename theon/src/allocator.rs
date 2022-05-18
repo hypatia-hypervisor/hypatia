@@ -28,7 +28,7 @@ unsafe impl GlobalAlloc for BumpAlloc<'_> {
         if offset > heap.len() || offset + layout.size() > heap.len() {
             return core::ptr::null_mut();
         }
-        let ptr = ptr.add(offset);
+        let ptr = ptr.wrapping_add(offset);
         let heap = &mut heap[offset + layout.size()..];
         self.heap.replace(heap);
         ptr

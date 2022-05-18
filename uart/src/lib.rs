@@ -7,6 +7,7 @@
 
 #![feature(strict_provenance)]
 #![cfg_attr(not(test), no_std)]
+#![forbid(unsafe_op_in_unsafe_fn)]
 
 mod x86_64;
 

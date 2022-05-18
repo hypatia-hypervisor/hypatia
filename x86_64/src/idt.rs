@@ -38,7 +38,9 @@ impl IDT {
         let entries = idt as *mut segment::InterruptGateDescriptor;
         for (k, stub) in stubs.iter().enumerate() {
             let gate = make_gate(stub, k as u8);
-            core::ptr::write_volatile(entries.add(k), gate);
+            unsafe {
+                core::ptr::write_volatile(entries.add(k), gate);
+            }
         }
     }
 
@@ -50,14 +52,16 @@ impl IDT {
     /// on the local processor.
     pub unsafe fn load(idt: &'static IDT) {
         const LIMIT: u16 = (core::mem::size_of::<IDT>() - 1) as u16;
-        core::arch::asm!(r#"
-            subq $16, %rsp;
-            movq {base}, 8(%rsp);
-            movw ${LIMIT}, 6(%rsp);
-            lidt 6(%rsp);
-            addq $16, %rsp;
-            "#,
-            base = in(reg) idt, LIMIT = const LIMIT,
-            options(att_syntax));
+        unsafe {
+            core::arch::asm!(r#"
+                subq $16, %rsp;
+                movq {base}, 8(%rsp);
+                movw ${LIMIT}, 6(%rsp);
+                lidt 6(%rsp);
+                addq $16, %rsp;
+                "#,
+                base = in(reg) idt, LIMIT = const LIMIT,
+                options(att_syntax));
+        }
     }
 }
