@@ -19,7 +19,7 @@ pub mod arch {
 // a panic!() handler on a potentially wedged machine.
 #[macro_export]
 macro_rules! panic_println {
-    () => (uart_print!("\n"));
+    () => ($crate::panic_print!("\n"));
     ($($arg:tt)*) => ($crate::panic_print!("{}\n", format_args!($($arg)*)));
 }
 
