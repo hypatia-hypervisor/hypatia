@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#![feature(start)]
 #![feature(strict_provenance)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
@@ -22,6 +21,7 @@ pub fn zero_page() -> &'static Page4K {
 }
 
 /// Initialize the system.
-fn init() {
+#[no_mangle]
+pub extern "C" fn init() {
     zero_page();
 }

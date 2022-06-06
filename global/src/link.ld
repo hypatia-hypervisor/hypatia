@@ -7,7 +7,7 @@
  * https://opensource.org/licenses/MIT.
  */
 
-ENTRY(main)
+ENTRY(init)
 
 SECTIONS {
 	. = 0xFFFFFC0000000000;

@@ -8,7 +8,6 @@
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
 #![feature(naked_functions)]
-#![feature(start)]
 #![feature(strict_provenance)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
@@ -134,7 +133,7 @@ const BINARY_LOAD_REGION_END: HPA = load_addr(BINARY_TABLE.len());
 /// regions that make up both the binary archive
 /// as well as our load regions are mapped within
 /// this region, so we can address them via pointers.
-#[cfg_attr(not(test), start, no_mangle)]
+#[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     let multiboot = x86_64::init::start(mbinfo_phys);
     let crate::x86_64::multiboot1::InitInfo { memory_regions, regions, modules } = multiboot.info();
