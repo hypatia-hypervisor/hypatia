@@ -5,6 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
+#![forbid(absolute_paths_not_starting_with_crate)]
+#![forbid(elided_lifetimes_in_paths)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
 use std::{

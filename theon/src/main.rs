@@ -11,6 +11,8 @@
 #![feature(strict_provenance)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
+#![forbid(absolute_paths_not_starting_with_crate)]
+#![forbid(elided_lifetimes_in_paths)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
 //! # Theon: System coldboot loader

@@ -9,7 +9,7 @@ use alloc::alloc::Layout;
 use core::panic::PanicInfo;
 
 #[panic_handler]
-pub extern "C" fn panic(info: &PanicInfo) -> ! {
+pub extern "C" fn panic(info: &PanicInfo<'_>) -> ! {
     libhypatia::panic::print_panic(info);
     #[allow(clippy::empty_loop)]
     loop {}

@@ -50,6 +50,8 @@
 #![feature(step_trait)]
 #![feature(strict_provenance)]
 #![cfg_attr(not(test), no_std)]
+#![forbid(absolute_paths_not_starting_with_crate)]
+#![forbid(elided_lifetimes_in_paths)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
 use core::convert::TryFrom;
@@ -424,7 +426,7 @@ impl Step for V512GA {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StackIndex {
     Rsp0 = 0,
     Ist1 = 1,

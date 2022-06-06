@@ -41,7 +41,7 @@ fn theon_region() -> memory::Region {
     memory::Region { start, end: phys_end, typ: memory::Type::Loader }
 }
 
-fn parse_memory(mb: &Multiboot) -> Option<Vec<memory::Region>> {
+fn parse_memory(mb: &Multiboot<'_, '_>) -> Option<Vec<memory::Region>> {
     Some(
         mb.memory_regions()?
             .map(|r| memory::Region {
@@ -72,7 +72,7 @@ impl<'a> MultibootModule<'a> {
     }
 }
 
-fn parse_modules<'a>(mb: &'a Multiboot) -> Option<Vec<MultibootModule<'a>>> {
+fn parse_modules<'a>(mb: &'a Multiboot<'_, '_>) -> Option<Vec<MultibootModule<'a>>> {
     Some(
         mb.modules()?
             .map(|m| MultibootModule {
@@ -100,7 +100,7 @@ impl Multiboot1 {
         Multiboot1 { multiboot }
     }
 
-    pub(crate) fn info(&self) -> InitInfo {
+    pub(crate) fn info(&self) -> InitInfo<'_> {
         let (memory_regions, regions, modules) = init_memory_regions(&self.multiboot);
         InitInfo { memory_regions, regions, modules }
     }
@@ -112,7 +112,7 @@ pub(crate) fn init(mbinfo_phys: u64) -> Multiboot1 {
 }
 
 fn init_memory_regions<'a>(
-    mb: &'a Multiboot,
+    mb: &'a Multiboot<'_, '_>,
 ) -> (Vec<memory::Region>, Vec<memory::Region>, Vec<MultibootModule<'a>>) {
     let memory_regions = parse_memory(mb).unwrap();
     let modules = parse_modules(mb).expect("could not find modules");
@@ -122,7 +122,7 @@ fn init_memory_regions<'a>(
 
 fn usable_regions(
     mut regions: Vec<memory::Region>,
-    modules: &[MultibootModule],
+    modules: &[MultibootModule<'_>],
 ) -> Vec<memory::Region> {
     regions.push(theon_region());
     for module in modules {

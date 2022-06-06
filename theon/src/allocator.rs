@@ -37,4 +37,4 @@ unsafe impl GlobalAlloc for BumpAlloc<'_> {
 }
 
 #[global_allocator]
-static mut BUMP_ALLOCATOR: BumpAlloc = BumpAlloc { heap: Cell::new(unsafe { &mut HEAP }) };
+static mut BUMP_ALLOCATOR: BumpAlloc<'static> = BumpAlloc { heap: Cell::new(unsafe { &mut HEAP }) };
