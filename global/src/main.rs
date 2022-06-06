@@ -10,8 +10,6 @@
 #![cfg_attr(not(test), no_std)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
-libhypatia::define_segment!(init);
-
 use arch::Page4K;
 
 /// Returns a static reference to the global zero page.
@@ -25,3 +23,5 @@ pub fn zero_page() -> &'static Page4K {
 pub extern "C" fn init() {
     zero_page();
 }
+
+libhypatia::runtime!();

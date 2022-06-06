@@ -12,11 +12,11 @@
 
 mod x86_64;
 
-libhypatia::define_task!();
-
 #[no_mangle]
 pub extern "C" fn start() {
     unsafe {
         core::arch::asm!("movl $0xcafef00d, %eax", options(att_syntax));
     }
 }
+
+libhypatia::runtime!();

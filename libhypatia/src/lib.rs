@@ -10,8 +10,8 @@
 #![cfg_attr(not(test), no_std)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
-pub mod runtime;
 pub mod panic;
+pub mod runtime;
 mod x86_64;
 
 #[cfg(test)]
