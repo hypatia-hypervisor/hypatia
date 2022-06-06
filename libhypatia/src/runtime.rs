@@ -29,16 +29,6 @@ macro_rules! __runtime_boilerplate {
 macro_rules! define_segment {
     ($init:ident) => {
         libhypatia::__runtime_boilerplate!();
-        mod _no_std_segment {
-            // cfg_attr(not(test), no_mangle) here acts as a hack that acts as a rename for the
-            // 'main' function when compiled as a test, thus getting out of the way of the test
-            // compile's main.
-            #[start]
-            #[cfg_attr(not(test),no_mangle)]
-            pub extern "C" fn main() {
-                crate::$init()
-            }
-        }
     };
 }
 
