@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#![feature(lang_items)]
 #![feature(start)]
 #![feature(strict_provenance)]
 #![cfg_attr(not(test), no_main)]

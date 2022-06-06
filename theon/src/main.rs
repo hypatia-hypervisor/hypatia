@@ -7,7 +7,6 @@
 
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
-#![feature(lang_items)]
 #![feature(naked_functions)]
 #![feature(start)]
 #![feature(strict_provenance)]

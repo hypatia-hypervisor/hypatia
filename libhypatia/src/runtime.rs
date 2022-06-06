@@ -18,9 +18,6 @@ macro_rules! __runtime_boilerplate {
                 #[allow(clippy::empty_loop)]
                 loop {}
             }
-
-            #[lang = "eh_personality"]
-            extern "C" fn eh_personality() {}
         }
     };
 }

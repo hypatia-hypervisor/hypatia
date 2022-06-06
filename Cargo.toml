@@ -6,7 +6,6 @@
 # https://opensource.org/licenses/MIT.
 
 [workspace]
-
 members = [
     "devices",
     "global",
@@ -23,3 +22,9 @@ members = [
     "x86_64",
     "xtask",
 ]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
