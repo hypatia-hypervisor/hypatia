@@ -15,9 +15,6 @@ pub extern "C" fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[lang = "eh_personality"]
-extern "C" fn eh_personality() {}
-
 #[alloc_error_handler]
 pub fn oom(layout: Layout) -> ! {
     panic!("Early allocation failed on size {}", layout.size());
