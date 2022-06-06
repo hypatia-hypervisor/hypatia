@@ -12,7 +12,7 @@
 use core::panic::PanicInfo;
 
 /// Print a `PanicInfo` struct out to the console.
-pub fn print_panic(info: &PanicInfo) {
+pub fn print_panic(info: &PanicInfo<'_>) {
     uart::panic_println!("\nPANIC: ");
     uart::panic_println!("*************** [ Cut Here ] *************");
     uart::panic_println!("{:#?}", info);
