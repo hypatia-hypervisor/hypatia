@@ -10,7 +10,7 @@
 #![cfg_attr(not(test), no_std)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
-libhypatia::define_task!();
-
 #[no_mangle]
 pub extern "C" fn start() {}
+
+libhypatia::runtime!();

@@ -10,9 +10,9 @@
 #![cfg_attr(not(test), no_std)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
-libhypatia::define_segment!(init);
-
 #[no_mangle]
 pub extern "C" fn init() {
     uart::panic_println!("Hi from the monitor");
 }
+
+libhypatia::runtime!();
