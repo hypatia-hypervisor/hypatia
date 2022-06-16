@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-use crate::x86_64::multiboot1;
+use crate::x86_64::pc::multiboot1;
 
 static mut IDT: arch::idt::IDT = arch::idt::IDT::empty();
 static mut GDT: arch::gdt::GDT = arch::gdt::GDT::empty();

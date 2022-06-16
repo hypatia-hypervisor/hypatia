@@ -5,5 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-pub mod memory;
-pub mod pc;
+pub mod asm;
+pub mod init;
+pub mod multiboot1;

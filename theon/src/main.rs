@@ -137,8 +137,8 @@ const BINARY_LOAD_REGION_END: HPA = load_addr(BINARY_TABLE.len());
 /// this region, so we can address them via pointers.
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
-    let multiboot = x86_64::init::start(mbinfo_phys);
-    let crate::x86_64::multiboot1::InitInfo { memory_regions, regions, modules } = multiboot.info();
+    let multiboot = x86_64::pc::init::start(mbinfo_phys);
+    let crate::x86_64::pc::multiboot1::InitInfo { memory_regions, regions, modules } = multiboot.info();
     assert!(theon_fits(&regions));
     core::mem::drop(memory_regions);
     uart::panic_println!("end = {:016x}", theon::end_addr());
