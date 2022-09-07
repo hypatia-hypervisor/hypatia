@@ -57,6 +57,11 @@ impl PTE {
         PTE(AtomicU64::new(0))
     }
 
+    /// Creates an invalid prototype pointer for provenance casts.
+    pub const fn proto_ptr() -> *const PTE {
+        core::ptr::null()
+    }
+
     /// Zeroes out the PTE.
     pub fn clear(&self) {
         self.0.store(0, Ordering::Relaxed)
@@ -188,7 +193,7 @@ trait Level {
 
     fn pte_ref(va: usize) -> &'static PTE {
         let addr = Self::BASE_ADDRESS + Self::index(va) * core::mem::size_of::<PTE>();
-        unsafe { &*(addr as *const PTE) }
+        unsafe { &*PTE::proto_ptr().with_addr(addr) }
     }
 
     fn entry(va: usize) -> Option<Self::EntryType> {
@@ -212,7 +217,7 @@ trait Level {
     /// before calling.
     unsafe fn side_pte_ref(va: usize) -> &'static PTE {
         let addr = Self::SIDE_BASE_ADDRESS + Self::index(va) * core::mem::size_of::<PTE>();
-        unsafe { &*(addr as *const PTE) }
+        unsafe { &*PTE::proto_ptr().with_addr(addr) }
     }
 
     /// # Safety
@@ -325,6 +330,10 @@ impl PageTable {
 
     pub fn root_addr(&self) -> HPA {
         translate_ptr(self)
+    }
+
+    pub const fn proto_ptr() -> *const PageTable {
+        core::ptr::null()
     }
 }
 
@@ -550,7 +559,7 @@ pub fn unmap_root_ranges(ranges: &[Range<V4KA>]) {
 /// be an address space at all.
 pub unsafe fn side_load(pf: PF4K) -> Result<()> {
     let _tlb = TLBFlushGuard::new();
-    let table = unsafe { &mut *(Level4::BASE_ADDRESS as *mut PageTable) };
+    let table = unsafe { &mut *PageTable::proto_ptr().with_addr(Level4::BASE_ADDRESS).cast_mut() };
     table.entries[Level4::SIDE_INDEX] = PTE::new(pf.pfa(), PTEFlags::PRESENT | PTEFlags::WRITE);
     Ok(())
 }
@@ -563,7 +572,7 @@ pub unsafe fn side_load(pf: PF4K) -> Result<()> {
 /// loaded.
 pub unsafe fn unload_side() -> Result<PF4K> {
     let _tlb = TLBFlushGuard::new();
-    let table = unsafe { &mut *(Level4::BASE_ADDRESS as *mut PageTable) };
+    let table = unsafe { &mut *PageTable::proto_ptr().with_addr(Level4::BASE_ADDRESS).cast_mut() };
     let entry = table.entries[Level4::SIDE_INDEX].pfa();
     table.entries[Level4::SIDE_INDEX].clear();
     Ok(PF4K::new(entry))
@@ -683,7 +692,7 @@ where
 /// Returns the host physical address of the address space root for
 /// the currently loaded address space.
 pub fn address_space_root() -> HPA {
-    let table = unsafe { &*(Level4::BASE_ADDRESS as *const PageTable) };
+    let table = unsafe { &*PageTable::proto_ptr().with_addr(Level4::BASE_ADDRESS) };
     table.root_addr()
 }
 

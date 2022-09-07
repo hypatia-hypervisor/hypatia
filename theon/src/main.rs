@@ -8,6 +8,7 @@
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
 #![feature(naked_functions)]
+#![feature(ptr_sub_ptr)]
 #![feature(strict_provenance)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
@@ -138,15 +139,17 @@ const BINARY_LOAD_REGION_END: HPA = load_addr(BINARY_TABLE.len());
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     let multiboot = x86_64::pc::init::start(mbinfo_phys);
-    let crate::x86_64::pc::multiboot1::InitInfo { memory_regions, regions, modules } = multiboot.info();
+    let crate::x86_64::pc::multiboot1::InitInfo { memory_regions, regions, modules } =
+        multiboot.info();
     assert!(theon_fits(&regions));
     core::mem::drop(memory_regions);
-    uart::panic_println!("end = {:016x}", theon::end_addr());
+    uart::panic_println!("end = {:016x?}", theon::end_addr());
     uart::panic_println!("regions: {:#x?}", regions);
     // TODO(cross): We really ought to clean this up.
     let bins = modules.iter().find(|m| m.name == Some("bin.a")).expect("found 'bin.a' in modules");
     assert!(
-        bins.bytes.as_ptr() as usize + bins.bytes.len() < theon::vaddr(BINARY_LOAD_REGION_START)
+        unsafe { bins.bytes.as_ptr().add(bins.bytes.len()) }.addr()
+            < theon::vaddr(BINARY_LOAD_REGION_START).addr()
     );
     let archive = goblin::archive::Archive::parse(bins.bytes).expect("cannot parse bin.a");
     uart::panic_println!("Binary archive: {:#x?}", archive);
@@ -157,11 +160,11 @@ pub extern "C" fn main(mbinfo_phys: u64) -> ! {
         load(name, typ, bytes, addr..region_end).expect("loaded binary");
     }
     unsafe { core::arch::asm!("int3") };
-    panic!("main: trapstubs = {:#x}", arch::trap::stubs as usize);
+    panic!("main: trapstubs = {:#x?}", arch::trap::stubs as usize);
 }
 
 fn theon_fits(regions: &[Region]) -> bool {
-    assert!(theon::end_addr() < theon::vaddr(BINARY_LOAD_REGION_START));
+    assert!(theon::end_addr().addr() < theon::vaddr(BINARY_LOAD_REGION_START).addr());
     for region in regions.iter().filter(|&r| r.typ == Type::RAM) {
         if region.start <= BINARY_LOAD_REGION_START.addr()
             && BINARY_LOAD_REGION_END.addr() <= region.end
@@ -176,7 +179,7 @@ fn theon_fits(regions: &[Region]) -> bool {
 fn clear_binary_load_region() {
     let start = theon::vaddr(BINARY_LOAD_REGION_START);
     let end = theon::vaddr(BINARY_LOAD_REGION_END);
-    unsafe { core::ptr::write_bytes(start as *mut u8, 0, end - start) };
+    unsafe { core::ptr::write_bytes(start.cast_mut(), 0, end.sub_ptr(start)) };
 }
 
 /// Loads the named binary of the given type into given physical region.
@@ -203,8 +206,8 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
         regions.push(V4KA::new(vm.start)..V4KA::new_round_up(vm.end));
         headers.push(header);
     }
-    let base = theon::vaddr(region.start) as *mut u8;
-    let len = theon::vaddr(region.end) - theon::vaddr(region.start);
+    let base = theon::vaddr(region.start).cast_mut();
+    let len = unsafe { theon::vaddr(region.end).sub_ptr(theon::vaddr(region.start)) };
     let heap = unsafe { core::slice::from_raw_parts_mut(base, len) };
     let bump = allocator::BumpAlloc::new(heap);
     let allocate = || {
@@ -215,7 +218,7 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
         if mem.is_null() {
             return Err("failed to allocate page");
         }
-        let page = unsafe { &mut *(mem as *mut Page4K) };
+        let page = unsafe { &mut *Page4K::proto_ptr().with_addr(mem.addr()).cast_mut() };
         Ok(page)
     };
     let root = allocate().expect("allocated root page for binary");
@@ -234,7 +237,7 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
             let page = allocate().expect("allocated data page");
             if !src.is_empty() {
                 let len = usize::min(src.len(), Page4K::SIZE);
-                let dst = page.vaddr().addr() as *mut u8;
+                let dst = theon::VZERO.with_addr(page.vaddr().addr()).cast_mut();
                 unsafe {
                     core::ptr::copy_nonoverlapping(src.as_ptr(), dst, len);
                 }

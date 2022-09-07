@@ -143,7 +143,8 @@ impl InterruptGateDescriptor {
     }
 
     pub fn new(thunk: &trap::Stub, stack_index: StackIndex) -> InterruptGateDescriptor {
-        let va = thunk as *const _ as usize;
+        let ptr: *const trap::Stub = thunk;
+        let va = ptr.addr();
         InterruptGateDescriptor::empty()
             .with_offset0(va.get_bits(0..16) as u16)
             .with_offset16(va.get_bits(16..32) as u16)

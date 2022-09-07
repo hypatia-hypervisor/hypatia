@@ -128,7 +128,8 @@ impl TSS {
 
     /// Returns a fully-formed TSS descriptor for this TSS.
     pub fn descriptor(&self) -> segment::TaskStateDescriptor {
-        let va = (self as *const Self).addr() as u64;
+        let ptr: *const Self = self;
+        let va = ptr.addr() as u64;
         segment::TaskStateDescriptor::empty()
             .with_limit0(core::mem::size_of::<TSS>() as u16 - 1)
             .with_base0(va.get_bits(0..16) as u16)

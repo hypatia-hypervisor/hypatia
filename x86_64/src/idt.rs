@@ -34,12 +34,11 @@ impl IDT {
     /// # Safety
     ///
     /// Called once for every IDT.
-    pub unsafe fn init(idt: *mut IDT, stubs: &[trap::Stub; 256]) {
-        let entries = idt as *mut segment::InterruptGateDescriptor;
+    pub unsafe fn init(idt: &mut IDT, stubs: &[trap::Stub; 256]) {
         for (k, stub) in stubs.iter().enumerate() {
             let gate = make_gate(stub, k as u8);
             unsafe {
-                core::ptr::write_volatile(entries.add(k), gate);
+                core::ptr::write_volatile(&mut idt.entries[k], gate);
             }
         }
     }

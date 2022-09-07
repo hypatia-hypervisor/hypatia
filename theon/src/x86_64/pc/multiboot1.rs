@@ -11,8 +11,10 @@ use alloc::vec::Vec;
 use multiboot::information::{MemoryManagement, MemoryType, Multiboot, PAddr};
 
 unsafe fn phys_to_slice(phys_addr: PAddr, len: usize) -> Option<&'static [u8]> {
-    let p = (theon::VZERO + phys_addr as usize) as *const u8;
-    Some(unsafe { core::slice::from_raw_parts(p, len) })
+    Some(unsafe {
+        let p = theon::VZERO.add(phys_addr as usize);
+        core::slice::from_raw_parts(p, len)
+    })
 }
 
 struct MM;
@@ -37,7 +39,7 @@ static mut MULTIBOOT_MM: MM = MM {};
 
 fn theon_region() -> memory::Region {
     let start = 0x0000_0000_0010_0000_u64;
-    let phys_end = (theon::end_addr() - theon::VZERO) as u64;
+    let phys_end = unsafe { theon::end_addr().sub_ptr(theon::VZERO) } as u64;
     memory::Region { start, end: phys_end, typ: memory::Type::Loader }
 }
 
@@ -66,7 +68,7 @@ pub(crate) struct MultibootModule<'a> {
 
 impl<'a> MultibootModule<'a> {
     fn region(&self) -> memory::Region {
-        let phys_start = self.bytes.as_ptr().addr() - theon::VZERO;
+        let phys_start = unsafe { self.bytes.as_ptr().sub_ptr(theon::VZERO) };
         let phys_end = phys_start.wrapping_add(self.bytes.len());
         memory::Region { start: phys_start as u64, end: phys_end as u64, typ: memory::Type::Module }
     }

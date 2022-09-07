@@ -80,7 +80,8 @@ impl GDT {
     ///
     /// Called on a valid GDT.
     unsafe fn lgdt(&self) {
-        let base = u64::try_from((self as *const Self).addr()).unwrap();
+        let ptr: *const Self = self;
+        let base = u64::try_from(ptr.addr()).unwrap();
         const LIMIT: u16 = core::mem::size_of::<GDT>() as u16 - 1;
         unsafe {
             asm!(r#"

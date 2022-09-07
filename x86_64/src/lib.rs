@@ -132,6 +132,11 @@ impl Page4K {
     pub const fn new() -> Page4K {
         Page4K([0; 4 * KIB])
     }
+
+    /// Returns an invalid pointer.
+    pub const fn proto_ptr() -> *const Page4K {
+        core::ptr::invalid(0)
+    }
 }
 
 impl Page for Page4K {
