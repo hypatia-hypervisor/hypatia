@@ -10,6 +10,7 @@ STACKSIZE =		8192
 Cr0PE =			1 << 0
 Cr0MP =			1 << 1
 Cr0TS =			1 << 3
+Cr0WP =			1 << 16
 Cr0NW =			1 << 29
 Cr0CD =			1 << 30
 Cr0PG =			1 << 31
@@ -248,7 +249,7 @@ startboot:
 
 	// Enable protected mode and paging.
 	movl	%cr0, %eax
-	orl	$(Cr0PE | Cr0PG), %eax
+	orl	$(Cr0PE | Cr0PG | Cr0WP), %eax
 	andl	$~(Cr0MP | Cr0TS | Cr0NW | Cr0CD), %eax
 	movl	%eax, %cr0
 
