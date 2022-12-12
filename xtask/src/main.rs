@@ -89,7 +89,7 @@ fn main() {
         Some(("clean", _)) => clean(),
         _ => Err("bad subcommand".into()),
     } {
-        eprintln!("{}", e);
+        eprintln!("{e}");
         process::exit(1);
     }
 }
