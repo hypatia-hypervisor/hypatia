@@ -479,4 +479,5 @@ earlypt3:
 
 // Stack.
 .globl bootstack
-.comm	bootstack, STACKSIZE
+bootstack:
+	.space	STACKSIZE
