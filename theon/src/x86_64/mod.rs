@@ -6,4 +6,9 @@
 // https://opensource.org/licenses/MIT.
 
 pub mod memory;
+pub mod mp;
 pub mod pc;
+
+pub mod platform {
+    pub use super::pc::*;
+}

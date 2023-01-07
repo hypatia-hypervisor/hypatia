@@ -49,18 +49,11 @@ impl GDT {
         }
     }
 
-    /// Returns a new GDT with a task segment descriptor that refers
-    /// to the given TSS.
-    pub fn new(task_state: &TSS) -> GDT {
-        GDT {
-            null: segment::Descriptor::null(),
-            hypertext: segment::Descriptor::code64(),
-            _hyperdata: segment::Descriptor::empty(),
-            _userdata: segment::Descriptor::empty(),
-            _usertext: segment::Descriptor::empty(),
-            _unused: segment::Descriptor::empty(),
-            task: task_state.descriptor(),
-        }
+    /// Initializes a GDT with a valid 64-bit code segment and
+    /// a task segment descriptor that refers to the given TSS.
+    pub fn init(&mut self, task_state: &TSS) {
+        self.hypertext = segment::Descriptor::code64();
+        self.task = task_state.descriptor();
     }
 
     /// Returns the code selector for %cs
@@ -73,8 +66,9 @@ impl GDT {
         6 << 3
     }
 
-    /// Loads the GDTR with this GDT by building a descriptor on the
-    /// stack and then invoking the LGDT instruction on that descriptor.
+    /// Loads the GDTR with this GDT by building a descriptor on
+    /// the stack and then invoking the LGDT instruction on that
+    /// descriptor.
     ///
     /// # Safety
     ///
@@ -107,17 +101,17 @@ impl GDT {
             asm!("ltr {:x};", in(reg) selector);
         }
     }
+}
 
-    /// Loads this GDT and sets the task register to refer to its
-    /// TSS descriptor.
-    ///
-    /// # Safety
-    ///
-    /// Must be called on a valid, initialized GDT.
-    pub unsafe fn load(&self) {
-        unsafe {
-            self.lgdt();
-            Self::ltr(Self::task_selector());
-        }
+/// Loads this GDT and sets the task register to refer to its
+/// TSS descriptor.
+///
+/// # Safety
+///
+/// Must be called on a valid, initialized GDT.
+pub unsafe fn load(gdt: &'static mut GDT) {
+    unsafe {
+        gdt.lgdt();
+        GDT::ltr(GDT::task_selector());
     }
 }

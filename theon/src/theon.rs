@@ -17,6 +17,18 @@ pub(crate) fn end_addr() -> *const u8 {
     unsafe { end.as_ptr() }
 }
 
+pub(crate) fn apstart() -> &'static [u8] {
+    extern "C" {
+        static apstart: [u8; 0];
+        static eapstart: [u8; 0];
+    }
+    unsafe {
+        let ptr = apstart.as_ptr();
+        let len = eapstart.as_ptr().addr() - ptr.addr();
+        core::slice::from_raw_parts(ptr, len)
+    }
+}
+
 /// The start of Theon's virtual address space.
 pub(crate) const VZERO: *const u8 = core::ptr::invalid(0xFFFF_8000_0000_0000);
 
