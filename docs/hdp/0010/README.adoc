@@ -5,8 +5,11 @@
 Hypatia Tasks
 =============
 
-In Hypatia, tasks are independent flows of execution that can be
-scheduled.
+In Hypatia, tasks are independently scheduled flows of
+execution.  They are conceptually similar to, and share
+properties with, both threads and processes as in other
+systems, but are dissimilar enough from both to warrant
+their name.
 
 Tasks resemble processes in that they are instances of executing
 programs, but they are cooperatively scheduled.  Similarly, they
@@ -20,9 +23,10 @@ task per machine.
 
 As its name implies, the vm control task is responsible for
 coordinating and controlling an instance of a virtual machine,
-while the vcpu task drives an instance of a single VCPU within a
+while a vcpu task drives an instance of a single VCPU within a
 virtual machine.  There many be many instances of each of these
-types of task.
+types of task: one vm control task per virtual machine, and a
+vcpu tasks for each configured VCPU.
 
 Tasks tend to run in host kernel mode.
 
@@ -40,12 +44,12 @@ machine.
 
 Task sets have the property that members can share a portion of
 their address space; this is the _task set area_ that is
-described in the ystemmemory HDP.  This area is owned by the task set
-leader, but exposed mapped into the address space of the other
-members of the set: this allows members of a task set to
-coordinate via shared memory.  The posted interrupt descriptor
-for a VCPU is mapped into this area, for example, so that VCPUs
-may easily send each other IPIs.
+described in the system memory HDP.  This area is owned by the
+task set leader, but exposed mapped into the address space of
+the other members of the set: this allows members of a task set
+to coordinate via shared memory.  The posted interrupt
+descriptor for a VCPU is mapped into this area, for example, so
+that VCPUs may easily send each other IPIs.
 
 External Communications
 -----------------------
