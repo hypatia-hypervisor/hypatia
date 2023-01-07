@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" viewBox="394.5 913.8195 536 328.68046" width="536" height="328.68046">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="Canvas_1" fill="none" stroke-dasharray="none" fill-opacity="1" stroke="none" stroke-opacity="1">
+    <title>Canvas 1</title>
+    <rect fill="white" x="394.5" y="913.8195" width="536" height="328.68046"/>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_20">
+        <rect x="772" y="967" width="13" height="100" fill="white"/>
+        <rect x="772" y="967" width="13" height="100" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_15">
+        <rect x="636" y="967" width="13" height="100" fill="white"/>
+        <rect x="636" y="967" width="13" height="100" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_16">
+        <rect x="649" y="967" width="13" height="100" fill="white"/>
+        <rect x="649" y="967" width="13" height="100" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_17">
+        <rect x="662" y="967" width="13" height="100" fill="white"/>
+        <rect x="662" y="967" width="13" height="100" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_18">
+        <rect x="746" y="967" width="13" height="100" fill="white"/>
+        <rect x="746" y="967" width="13" height="100" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_19">
+        <rect x="759" y="967" width="13" height="100" fill="white"/>
+        <rect x="759" y="967" width="13" height="100" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_22">
+        <rect x="675" y="967" width="71" height="100" fill="white"/>
+        <rect x="675" y="967" width="71" height="100" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(680 1005.22)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="20" fill="black" x="16.5" y="19">••••</tspan>
+        </text>
+      </g>
+      <g id="Graphic_24">
+        <rect x="410" y="1177" width="75" height="50" fill="white"/>
+        <rect x="410" y="1177" width="75" height="50" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_25">
+        <line x1="642.5" y1="1067" x2="456.1227" y2="1172.1359" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_27">
+        <rect x="510" y="1177" width="75" height="50" fill="white"/>
+        <rect x="510" y="1177" width="75" height="50" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_30">
+        <line x1="655.5" y1="1067" x2="554.43584" y2="1169.9357" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_31">
+        <rect x="610" y="1177" width="75" height="50" fill="white"/>
+        <rect x="610" y="1177" width="75" height="50" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_32">
+        <line x1="668.5" y1="1067" x2="649.3565" y2="1167.2756" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_42">
+        <rect x="740" y="1177" width="75" height="50" fill="white"/>
+        <rect x="740" y="1177" width="75" height="50" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_43">
+        <line x1="752.5" y1="1067" x2="775.30595" y2="1167.3462" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_44">
+        <rect x="840" y="1177" width="75" height="50" fill="white"/>
+        <rect x="840" y="1177" width="75" height="50" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_45">
+        <line x1="765.5" y1="1067" x2="870.4369" y2="1170.063" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_52">
+        <path d="M 778.5 1067 C 778.5 1067 822.9427 1098.9713 833 1062 C 843.0573 1025.0287 848.7049 963.414 814 936.5 C 786.4327 915.1213 737.3554 946.9509 718.3346 960.9476" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+    </g>
+  </g>
+</svg>
