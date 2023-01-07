@@ -5,7 +5,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
+use crate::ProcessorID;
 use bitstruct::bitstruct;
+use seq_macro::seq;
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
@@ -43,7 +45,8 @@ pub enum DestinationShorthand {
 }
 
 bitstruct! {
-    #[derive(Clone, Copy)]
+    /// Represents the Interrupt Command Register.
+    #[derive(Clone, Copy, Default)]
     pub struct ICR(pub u64) {
         vector: u8 = 0..8;
         raw_delivery_mode: u8 = 8..11;
@@ -56,6 +59,11 @@ bitstruct! {
 }
 
 impl ICR {
+    #[must_use]
+    pub fn new() -> ICR {
+        ICR(0)
+    }
+
     #[must_use]
     pub fn with_delivery_mode(self, mode: DeliveryMode) -> ICR {
         self.with_raw_delivery_mode(mode as u8)
@@ -139,6 +147,93 @@ impl bitstruct::IntoRaw<bool, TriggerMode> for ICR {
             TriggerMode::Edge => false,
             TriggerMode::Level => true,
         }
+    }
+}
+
+/// Writes to the ICR MSR.
+unsafe fn write_icr(icr: ICR) {
+    unsafe {
+        x86::msr::wrmsr(x86::msr::IA32_X2APIC_ICR, icr.0);
+    }
+}
+
+seq!(N in 32..=255 {
+    #[repr(u8)]
+    pub enum InterruptVector {
+        #( Vector~N = N, )*
+    }
+});
+
+pub fn enable_x2apic() {
+    let apic_base = unsafe { x86::msr::rdmsr(x86::msr::IA32_APIC_BASE) };
+    let apic_base = apic_base | (0b11 << 10);
+    unsafe {
+        x86::msr::wrmsr(x86::msr::IA32_APIC_BASE, apic_base);
+    }
+}
+
+/// Sends an edge-triggered normal interrupt to a CPU.
+///
+/// # Safety
+/// IPIs are inherently dangerous.  Make sure the destination
+/// is valid, is properly initialized, and the vector is
+/// appropriate.
+pub unsafe fn send_ipi(cpu: ProcessorID, vector: InterruptVector) {
+    let icr = ICR::new()
+        .with_vector(vector as u8)
+        .with_delivery_mode(DeliveryMode::Fixed)
+        .with_trigger_mode(TriggerMode::Edge)
+        .with_destination(cpu.into());
+    unsafe {
+        write_icr(icr);
+    }
+}
+
+/// Sends a broadcast INIT to every core except self.
+///
+/// Sends as edge triggered, a la Xeon.
+///
+/// # Safety
+/// Be sure that the system is in a state amenable to forcing
+/// all processors into an INIT state.
+pub unsafe fn send_broadcast_init() {
+    let icr = ICR::new()
+        .with_trigger_mode(TriggerMode::Edge)
+        .with_delivery_mode(DeliveryMode::Init)
+        .with_destination_shorthand(Some(DestinationShorthand::AllButSelf));
+    unsafe {
+        write_icr(icr);
+    }
+}
+
+/// Sends a broadcast SIPI with the given vector to every core
+/// except self.
+///
+/// # Safety
+/// Be sure the system is in a state amenable to receipt of SIPI
+/// on all processors.
+pub unsafe fn send_broadcast_sipi(vector: u8) {
+    let icr = ICR::new()
+        .with_delivery_mode(DeliveryMode::SIPI)
+        .with_destination_shorthand(Some(DestinationShorthand::AllButSelf))
+        .with_vector(vector);
+    unsafe {
+        write_icr(icr);
+    }
+}
+
+/// Sends a startup IPI with the given vector to the given CPU.
+///
+/// # Safety
+/// Be sure tha the target processor is in a state amenable to
+/// receipt of a SIPI.
+pub unsafe fn send_sipi(cpu: ProcessorID, vector: u8) {
+    let icr = ICR::new()
+        .with_delivery_mode(DeliveryMode::SIPI)
+        .with_destination(cpu.into())
+        .with_vector(vector);
+    unsafe {
+        write_icr(icr);
     }
 }
 

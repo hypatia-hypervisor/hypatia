@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-STACKSIZE =		8192
+STACKSIZE =		8 * 4096
 
 Cr0PE =			1 << 0
 Cr0MP =			1 << 1
@@ -19,7 +19,7 @@ Cr4PSE =		1 << 4
 Cr4PAE =		1 << 5
 Cr4FSGSBASE =		1 << 16
 
-IA32_MSR_EFER =		0xc0000080
+IA32_EFER_MSR =		0xc0000080
 EferSCE =		1 << 0
 EferLME =		1 << 8
 EferNX =		1 << 11
@@ -75,6 +75,11 @@ FeaturePG1G =		1 << 26
 FeatureNX =		1 << 20
 FeatureX2APIC =		1 << 21
 FeatureFSGSBase =	1 << 0
+
+IA32_APIC_BASE_MSR =	0x1B
+ApicBaseEnable =	1 << 11
+ApicBaseX2Enable =	1 << 10
+IA32_X2APIC_APICID_MSR = 0x802
 
 KERNZERO =		0xFFFF800000000000
 
@@ -139,9 +144,10 @@ startboot:
 	movb	$UartFIFO, %al
 	outb	%al, %dx		// Reset and enable FIFOs and triggers
 
-	// Check the state of the system to see whether it can support us.
-	// We assume that if the BSP supports all the required functionality,
-	// the rest of the logical processors in the system do as well.
+	// Check the state of the system to see whether it can
+	// support us.  We assume that if the BSP supports all
+	// the required functionality, the rest of the logical
+	// processors in the system do as well.
 	//
 	// Check multiboot magic
 	popl	%eax
@@ -207,7 +213,7 @@ startboot:
 	testl	$FeatureX2APIC, %ecx
 	jnz	1f
 	movl	$(ENoX2APIC - KERNZERO), %edi
-	//jmp	earlypanic
+	jmp	earlypanic
 1:
 	movl	$0x00000007, %eax
 	xorl	%ecx, %ecx
@@ -218,12 +224,12 @@ startboot:
 	movl	$(ENoFSGSBase - KERNZERO), %edi
 	jmp	earlypanic
 1:
-	// If we've gotten this far, the system supports the features
-	// that we need to run.  There's probably more we should check
-	// about the hardware.
+	// If we've gotten this far, the system supports the
+	// features that we need to run.  There's probably more
+	// we should check about the hardware.
 
-	// Check whether the GDT is in the first 16MiB of physical
-	// address space for later AP startup.
+	// Check whether the GDT is in the first 16MiB of
+	// physical address space for later AP startup.
 	movl	$(gdt - KERNZERO), %edx
 	cmpl	$((16 * (1 << 20)) - 32), %edx
 	jle	1f
@@ -231,7 +237,7 @@ startboot:
 	jmp	earlypanic
 1:
 	// Enable long mode, no-execute support, and SCE
-	movl	$IA32_MSR_EFER, %ecx
+	movl	$IA32_EFER_MSR, %ecx
 	movl	$(EferSCE | EferLME | EferNX), %eax
 	xorl	%edx, %edx
 	wrmsr
@@ -253,8 +259,8 @@ startboot:
 	andl	$~(Cr0MP | Cr0TS | Cr0NW | Cr0CD), %eax
 	movl	%eax, %cr0
 
-	// Load the low-mapped GDT with the long code segment and
-	// jump to 64-bit mode.
+	// Load the low-mapped GDT with the long code segment
+	// and jump to 64-bit mode.
 	lgdt	(gdtdesc - KERNZERO)
 	ljmpl	$GdtCODE64, $(boot64 - KERNZERO)
 
@@ -307,12 +313,12 @@ EGDTTooFarAway:	.asciz "\"earlypanic\": \"GDT Descriptor is beyond 16MiB\""
 .code64
 .align 64
 boot64:
-	// Load the high-mapped GDT.
+	// Load the virtually-mapped GDT.
 	movabsq	$gdtdescv, %rax
 	lgdt	(%rax)
 
-	// Zero out the segmentation registers; we won't touch them
-	// from here on out.
+	// Zero out the segmentation registers; we won't touch
+	// them from here on out.
 	xorl	%eax, %eax
 	movw	%ax, %ds
 	movw	%ax, %es
@@ -320,12 +326,24 @@ boot64:
 	movw	%ax, %gs
 	movw	%ax, %ss
 
-	popq	%rdi			// Multiboot parameters
+	// Multiboot parameters are an argument to `main`.
+	popq	%rdi
+
+	// Load the %rsp with the linked address of our stack.
 	movabsq	$(bootstack + STACKSIZE), %rsp
+
+	// Transition to running at linked addresses.
 	movabsq	$1f, %rax
 	pushq	%rax
 	ret
 1:
+	// We are now accessing everything relative to our
+	// linked addresses.  We can remove the identity mapping
+	// in low virtual memory.  We do this by reloading the
+	// page table root register to point to the _early page
+	// table_, which is the same as boot page table, but
+	// without the identity map.  We leave the boot page
+	// table as it is, as it is used to boot the APs.
 	movq	$(earlypgtbl - KERNZERO), %rax
 	movq	%rax, %cr3
 
@@ -341,10 +359,14 @@ boot64:
 .align 4096
 .rodata
 
+// AP startup.  APs begin in 16-bit real mode, executing at the
+// beginning of the page with the same number as the SIPI vector.
+// The A20 latch is already pre-disabled.
+
 APENTRY =		0x7000
-APPERCPU =		0x8000 - 24
-APID =			0x8000 - 16
-APSEMAPHORE =		0x8000 - 8
+APCPUS =		0x8000 - 8
+APNCPUS =		0x8000 - 16
+StateRUNNING =		1
 
 .code16
 .globl apstart, eapstart
@@ -379,7 +401,7 @@ eapstart:
 	movw	%ax, %fs
 	movw	%ax, %gs
 
-	movl	$IA32_MSR_EFER, %ecx
+	movl	$IA32_EFER_MSR, %ecx
 	movl	$(EferSCE | EferLME | EferNX), %eax
 	xorl	%edx, %edx
 	wrmsr
@@ -393,10 +415,9 @@ eapstart:
 	movl	%eax, %cr3
 
 	mov	%cr0, %eax
-	orl	$(Cr0PE | Cr0PG), %eax
+	orl	$(Cr0PE | Cr0PG | Cr0WP), %eax
 	andl	$~(Cr0MP | Cr0TS | Cr0NW | Cr0CD), %eax
 	movl	%eax, %cr0
-
 	ljmp	$GdtCODE64, $(1f - KERNZERO)
 
 .code64
@@ -412,22 +433,79 @@ eapstart:
 	movw	%ax, %gs
 	movw	%ax, %ss
 
-	movq	APPERCPU, %rdi
-	movq	APID, %rsi
-	movq	APSEMAPHORE, %rdx
+	// We need our x2APIC ID to proceed
+	movl	$IA32_APIC_BASE_MSR, %ecx
+	rdmsr
+	testl	$ApicBaseEnable, %eax
+	jnz	2f
+	lea	EXApicDisabled(%rip), %rdi
+	jmp	apearlypanic
+2:
+	// Turn on x2APIC mode
+	xorl	%edx, %edx
+	orl	$ApicBaseX2Enable, %eax
+	wrmsr
+	// Retrieve the x2APIC ID; stash in %rax.
+	movl	$IA32_X2APIC_APICID_MSR, %ecx
+	rdmsr
 
-	movq	%rdi, %rsp
-	addq	$4096, %rsp
+	// We now iterate through the list of APIC IDs
+	// to find our CPU *number* and mark our state
+	// as running.
+	movq	APCPUS, %rsi
+	movq	APNCPUS, %r8
+	xorl	%ecx, %ecx
+1:
+	cmp	%rcx, %r8
+	jne	2f
+	leaq	ECpuNotFound(%rip), %rdi
+	jmp	apearlypanic
+2:
+	movl	(%rsi), %edi
+	cmp	%eax, %edi
+	je	3f
+	incq	%rcx
+	addq	$16, %rsi
+	jmp	1b
+3:
+	// Load our per-CPU stack from the EntryCPU structure
+	// and mark state as running.  Stores within a cache
+	// line are atomic on x86, and we assume the store to
+	// EarlyCPU.state is aligned and thus atomic.
+	movq	8(%rsi), %rsp
+	movl	$StateRUNNING, 4(%rsi)
+
+	// Processor number is the argument to apmain
+	movq	%rcx, %rdi
+
+	// Jump to high, linked addresses.
 	movabsq	$1f, %rax
 	pushq	%rax
 	ret
+	ud2
 1:
+	// Call apmain in Rust code.
 	pushq	$0
 	movq	$0, %rbp
 	leaq	apmain(%rip), %rax
 	push	%rax
 	ret
 	ud2
+
+apearlypanic:
+	// TODO(cross): We really ought to write something to
+	// the UART here, but it clobbers too many registers in
+	// a state where we don't have a stack.  However, %rdi
+	// should at least contain a pointer to an error string
+	// that we can look at with a debugger or monitor to
+	// figure out what happened.  Halt in a loop, in case a
+	// stray SIPI or something similar restarts us.
+1:	cli
+	hlt
+	jmp	1b
+
+EXApicDisabled:	.asciz "\"earlypanic\": \"LAPIC disabled\""
+ECpuNotFound:	.asciz "\"earlypanic\": \"Secondary processor not in CPU list\""
 
 .align 16
 gdt:

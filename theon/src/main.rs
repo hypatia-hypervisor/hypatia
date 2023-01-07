@@ -7,6 +7,7 @@
 
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
+#![feature(inline_const)]
 #![feature(naked_functions)]
 #![feature(ptr_sub_ptr)]
 #![feature(strict_provenance)]
@@ -85,6 +86,7 @@ use alloc::vec::Vec;
 use core::ops::Range;
 
 use crate::x86_64::memory::{Region, Type};
+use crate::x86_64::mp;
 use arch::{VPageAddr, HPA, MIB, PF4K, V4KA};
 
 type Result<T> = core::result::Result<T, &'static str>;
@@ -138,6 +140,7 @@ const BINARY_LOAD_REGION_END: HPA = load_addr(BINARY_TABLE.len());
 /// this region, so we can address them via pointers.
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
+    arch::lapic::enable_x2apic();
     let multiboot = x86_64::pc::init::start(mbinfo_phys);
     let crate::x86_64::pc::multiboot1::InitInfo { memory_regions, regions, modules } =
         multiboot.info();
@@ -160,7 +163,41 @@ pub extern "C" fn main(mbinfo_phys: u64) -> ! {
         load(name, typ, bytes, addr..region_end).expect("loaded binary");
     }
     unsafe { core::arch::asm!("int3") };
+    // Start other CPUs.
+    uart::panic_println!("starting APs");
+    unsafe {
+        mp::start_aps(cpus());
+    }
     panic!("main: trapstubs = {:#x?}", arch::trap::stubs as usize);
+}
+
+// XXX: This is temporary, for testing purposes only.
+//
+// TODO(cross): We need to extract the list of CPUs from
+// somewhere, such as the ACPI MADT on the PC platform, or from
+// AMD platform-specific config on the Oxide architecture.  We
+// should also allocate stacks for the CPUs from memory that is
+// close to them (e.g., in the same NUMA domain or subdomain).
+fn cpus() -> &'static [mp::EntryCPU] {
+    fn stack() -> usize {
+        const NPAGES: usize = 8;
+        const STACK_SIZE: usize = core::mem::size_of::<arch::Page4K>() * NPAGES;
+        #[cfg(not(test))]
+        use alloc::boxed::Box;
+        let s = Box::new([const { arch::Page4K::new() }; NPAGES]);
+        let stack = &s[0];
+        let ptr = stack as *const arch::Page4K as *const u8;
+        let top = unsafe { ptr.add(STACK_SIZE) };
+        Box::leak(s);
+        top.addr()
+    }
+    let cs = alloc::vec![
+        mp::EntryCPU::new(arch::ProcessorID(0), stack()),
+        mp::EntryCPU::new(arch::ProcessorID(1), stack()),
+        mp::EntryCPU::new(arch::ProcessorID(2), stack()),
+        mp::EntryCPU::new(arch::ProcessorID(3), stack()),
+    ];
+    cs.leak()
 }
 
 fn theon_fits(regions: &[Region]) -> bool {
@@ -258,8 +295,18 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
 
 #[cfg_attr(test, allow(dead_code))]
 #[no_mangle]
-pub extern "C" fn apmain() -> ! {
-    unsafe { core::arch::asm!("hlt") };
+pub extern "C" fn apmain(cpu: arch::ProcessorID) -> ! {
+    use core::sync::atomic::{AtomicBool, Ordering};
+    static S: AtomicBool = AtomicBool::new(false);
+    while S.compare_exchange(false, true, Ordering::SeqCst, Ordering::Acquire).is_err() {
+        arch::cpu::relax();
+    }
+    uart::panic_println!("Hello from {}", u32::from(cpu));
+    S.store(false, Ordering::Release);
+    mp::signal_ap(cpu);
+    unsafe {
+        core::arch::asm!("hlt");
+    }
     panic!("apmain");
 }
 

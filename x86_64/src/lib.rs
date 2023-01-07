@@ -59,7 +59,7 @@ use core::iter::Step;
 use zerocopy::FromBytes;
 
 pub mod cpu;
-mod debug;
+pub(crate) mod debug;
 pub mod gdt;
 pub mod idt;
 pub mod io;
@@ -476,5 +476,22 @@ impl TryFrom<u8> for CPL {
             0b11 => Ok(CPL::Ring3),
             _ => Err("unrepresentable value in raw privilege level"),
         }
+    }
+}
+
+/// A Processor ID.  We'd call this CPUID, but that
+/// conflicts with the similarly named instruction.
+///
+/// Note that this is repr transparent and exactly
+/// 32 bits wide; this is important as values of
+/// this type are accessed from assembly language
+/// during AP startup.
+#[derive(Clone, Copy, Debug)]
+#[repr(transparent)]
+pub struct ProcessorID(pub u32);
+
+impl From<ProcessorID> for u32 {
+    fn from(id: ProcessorID) -> u32 {
+        id.0
     }
 }

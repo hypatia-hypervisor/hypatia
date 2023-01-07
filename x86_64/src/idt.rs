@@ -34,33 +34,33 @@ impl IDT {
     /// # Safety
     ///
     /// Called once for every IDT.
-    pub unsafe fn init(idt: &mut IDT, stubs: &[trap::Stub; 256]) {
+    pub unsafe fn init(&mut self, stubs: &[trap::Stub; 256]) {
         for (k, stub) in stubs.iter().enumerate() {
             let gate = make_gate(stub, k as u8);
             unsafe {
-                core::ptr::write_volatile(&mut idt.entries[k], gate);
+                core::ptr::write_volatile(&mut self.entries[k], gate);
             }
         }
     }
+}
 
-    /// Loads the IDT into the processor.
-    ///
-    /// # Safety
-    ///
-    /// Early code assumes a good stack and resets the IDT pointer
-    /// on the local processor.
-    pub unsafe fn load(idt: &'static IDT) {
-        const LIMIT: u16 = (core::mem::size_of::<IDT>() - 1) as u16;
-        unsafe {
-            core::arch::asm!(r#"
-                subq $16, %rsp;
-                movq {base}, 8(%rsp);
-                movw ${LIMIT}, 6(%rsp);
-                lidt 6(%rsp);
-                addq $16, %rsp;
-                "#,
-                base = in(reg) idt, LIMIT = const LIMIT,
-                options(att_syntax));
-        }
+/// Loads the IDT into the processor.
+///
+/// # Safety
+///
+/// Early code assumes a good stack and resets the IDT pointer
+/// on the local processor.
+pub unsafe fn load(idt: &'static mut IDT) {
+    const LIMIT: u16 = (core::mem::size_of::<IDT>() - 1) as u16;
+    unsafe {
+        core::arch::asm!(r#"
+            subq $16, %rsp;
+            movq {base}, 8(%rsp);
+            movw ${LIMIT}, 6(%rsp);
+            lidt 6(%rsp);
+            addq $16, %rsp;
+            "#,
+            base = in(reg) idt, LIMIT = const LIMIT,
+            options(att_syntax));
     }
 }
