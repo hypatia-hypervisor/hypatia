@@ -1,3 +1,3 @@
 [toolchain]
 channel = "nightly"
-components = [ "rustfmt", "rust-src", "llvm-tools-preview", "clippy" ]
+components = [ "rustfmt", "rust-src", "llvm-tools", "clippy" ]

@@ -95,7 +95,7 @@ fn main() {
 }
 
 fn build_type(matches: &clap::ArgMatches) -> Build {
-    if matches.contains_id("release") {
+    if matches.get_flag("release") {
         return Build::Release;
     }
     Build::Debug
