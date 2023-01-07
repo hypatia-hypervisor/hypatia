@@ -19,4 +19,5 @@ Hypatia Design Proposals: Index
 | link:0012[HDP0012] | Needed | Hypatia vm tasks
 | link:0013[HDP0013] | Needed | Hypatia vcpu tasks
 | link:0014[HDP0014] | Needed | Theon Boot Loader and Hypatia Boot Process
+| link:0015[HDP0015] | Needed | Use of Virtual Memory in Hypatia
 |===
