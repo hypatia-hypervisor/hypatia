@@ -25,6 +25,7 @@ members = [
 
 [profile.dev]
 panic = "abort"
+opt-level = 1  # enables enough optimization for reasonable stack usage
 
 [profile.release]
 panic = "abort"
