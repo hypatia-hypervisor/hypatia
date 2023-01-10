@@ -29,3 +29,4 @@ opt-level = 1  # enables enough optimization for reasonable stack usage
 
 [profile.release]
 panic = "abort"
+debug = 1
