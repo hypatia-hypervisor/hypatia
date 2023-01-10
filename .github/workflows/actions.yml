@@ -1,0 +1,8 @@
+name: run basic tests
+on: [push]
+jobs:
+  cargo_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo test
