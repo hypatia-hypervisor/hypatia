@@ -124,15 +124,6 @@ pub unsafe extern "C" fn trap() -> ! {
         asm!(r#"
             // Allocate space to save registers.
             subq $((4 + 15) * 8), %rsp
-            // Save the x86 segmentation registers.
-            movq $0, 18*8(%rsp);
-            movw %gs, 18*8(%rsp);
-            movq $0, 17*8(%rsp);
-            movw %fs, 17*8(%rsp);
-            movq $0, 16*8(%rsp);
-            movw %es, 16*8(%rsp);
-            movq $0, 15*8(%rsp);
-            movw %ds, 15*8(%rsp);
             // Save the general purpose registers.
             movq %r15, 14*8(%rsp);
             movq %r14, 13*8(%rsp);
@@ -149,17 +140,32 @@ pub unsafe extern "C" fn trap() -> ! {
             movq %rcx, 2*8(%rsp);
             movq %rbx, 1*8(%rsp);
             movq %rax, 0*8(%rsp);
-            // Fix up the vector number.  We got into `trap` via a
-            // CALL, so hardware pushed the address after after the
-            // CALLQ instruction onto the stack, and the byte at that
-            // location is the vector number from the stub.  Load
-            // the "return" address from the stack, then MOVZBQ what
-            // that points to into %rdi, and store back in the save
-            // area.
+            // Save the x86 segmentation registers.  Uses %rdi
+            // as a scratch register, so we do this after we've
+            // saved the GP registers..  Note that the 32-bit
+            // `movl` zero-extends the segmentation register and
+            // clears the upper bits of %rdi.  We use this
+            // because the result has a denser encoding than
+            // other instruction sequences.
+            movl %gs, %edi;
+            movq %rdi, 18*8(%rsp);
+            movl %fs, %edi;
+            movq %rdi, 17*8(%rsp);
+            movl %es, %edi;
+            movq %rdi, 16*8(%rsp);
+            movl %ds, %edi;
+            movq %rdi, 15*8(%rsp);
+            // Fix up the vector number.  We got into `trap` via
+            // a CALL, so hardware pushed the address after the
+            // CALLQ instruction onto the stack, and the byte at
+            // that location is the vector number from the stub.
+            // Load the "return" address from the stack, then
+            // MOVZBQ what that points to into %rdi, and store
+            // back in the save area.
             //
             // The vector number is an argument to the dispatch
-            // function, along with the address of the register save
-            // area at the top of the stack.
+            // function, along with the address of the register
+            // save area at the top of the stack.
             movq {vector_offset}(%rsp), %rdi;
             movzbq (%rdi), %rdi;
             movq %rdi, {vector_offset}(%rsp);
