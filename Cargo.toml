@@ -13,6 +13,7 @@ members = [
     "hypatia",
     "memory",
     "monitor",
+    "node",
     "scheduler",
     "supervisor",
     "system",

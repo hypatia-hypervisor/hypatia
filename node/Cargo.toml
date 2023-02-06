@@ -6,17 +6,13 @@
 # https://opensource.org/licenses/MIT.
 
 [package]
-name = "x86_64"
+name = "node"
 version = "0.1.0"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitflags = "*"
-bit_field = "*"
-bitstruct = "*"
-seq-macro = "*"
-static_assertions = "*"
-x86 = "*"
-zerocopy = { version = "*", features = [ "derive" ] }
+arch = { package = "x86_64", path = "../x86_64" }
+hypatia = { path = "../hypatia" }
+uart = { path = "../uart" }

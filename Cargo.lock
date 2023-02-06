@@ -220,6 +220,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "node"
+version = "0.1.0"
+dependencies = [
+ "hypatia",
+ "uart",
+ "x86_64",
+]
+
+[[package]]
 name = "once_cell_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -503,6 +512,7 @@ dependencies = [
  "bitflags 2.9.4",
  "bitstruct",
  "seq-macro",
+ "static_assertions",
  "x86",
  "zerocopy",
 ]
