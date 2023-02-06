@@ -154,6 +154,7 @@ name = "global"
 version = "0.1.0"
 dependencies = [
  "hypatia",
+ "uart",
  "x86_64",
 ]
 
