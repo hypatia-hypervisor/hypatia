@@ -12,12 +12,13 @@
 use crate::segment;
 use crate::tss::TSS;
 use core::arch::asm;
+use static_assertions::const_assert_eq;
 
 /// Support the x86_64 64-bit Global Descriptor Table.
 ///
 /// We waste a few bytes per CPU by allocating a 4KiB page for
 /// the GDT, then we map that at the known GDT location in the
-/// per-CPU virtual memory segment, but we pad that out to 64KiB
+/// per-node virtual memory segment.  We pad that out to 64KiB
 /// by mapping the zero page repeatedly beyond the end of the
 /// GDT proper.
 ///
@@ -34,7 +35,9 @@ pub struct GDT {
     _usertext: segment::Descriptor,
     _unused: segment::Descriptor, // For alignment.
     task: segment::TaskStateDescriptor,
+    _empty: [u64; 512 - 8],
 }
+const_assert_eq!(core::mem::size_of::<GDT>(), 4096);
 
 impl GDT {
     pub const fn empty() -> GDT {
@@ -46,6 +49,7 @@ impl GDT {
             _usertext: segment::Descriptor::empty(),
             _unused: segment::Descriptor::empty(),
             task: segment::TaskStateDescriptor::empty(),
+            _empty: [0; 512 - 8],
         }
     }
 
@@ -71,12 +75,11 @@ impl GDT {
     /// descriptor.
     ///
     /// # Safety
-    ///
     /// Called on a valid GDT.
     unsafe fn lgdt(&self) {
         let ptr: *const Self = self;
         let base = u64::try_from(ptr.addr()).unwrap();
-        const LIMIT: u16 = core::mem::size_of::<GDT>() as u16 - 1;
+        const LIMIT: u16 = 65535;
         unsafe {
             asm!(r#"
                 subq $16, %rsp;
