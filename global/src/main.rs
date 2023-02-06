@@ -1,4 +1,4 @@
-// Copyright 2021  The Hypatia Authors
+// Copyright 2023  The Hypatia Authors
 // All rights reserved
 //
 // Use of this source code is governed by an MIT-style
@@ -10,6 +10,8 @@
 #![forbid(absolute_paths_not_starting_with_crate)]
 #![forbid(elided_lifetimes_in_paths)]
 #![forbid(unsafe_op_in_unsafe_fn)]
+
+mod x86_64;
 
 use arch::Page4K;
 
@@ -23,6 +25,7 @@ pub fn zero_page() -> &'static Page4K {
 #[unsafe(no_mangle)]
 pub extern "C" fn init() {
     zero_page();
+    uart::panic_println!("Hello from global");
 }
 
 hypatia::runtime!();
