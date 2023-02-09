@@ -13,4 +13,4 @@ edition = "2021"
 [dependencies]
 bitstruct = "*"
 
-libhypatia = { path = "../libhypatia" }
+hypatia = { path = "../hypatia" }

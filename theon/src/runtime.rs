@@ -10,7 +10,7 @@ use core::panic::PanicInfo;
 
 #[panic_handler]
 pub extern "C" fn panic(info: &PanicInfo<'_>) -> ! {
-    libhypatia::panic::print_panic(info);
+    hypatia::panic::print_panic(info);
     #[allow(clippy::empty_loop)]
     loop {}
 }

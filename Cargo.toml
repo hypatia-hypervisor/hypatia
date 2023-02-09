@@ -9,6 +9,7 @@
 members = [
     "devices",
     "global",
+    "hypatia",
     "memory",
     "monitor",
     "scheduler",

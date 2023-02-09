@@ -13,4 +13,4 @@ edition = "2021"
 [dependencies]
 arch = { package = "x86_64", path = "../x86_64" }
 
-libhypatia = { path = "../libhypatia" }
+hypatia = { path = "../hypatia" }

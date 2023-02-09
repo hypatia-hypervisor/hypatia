@@ -20,4 +20,4 @@ pub extern "C" fn start() {
     port.send(b'a');
 }
 
-libhypatia::runtime!();
+hypatia::runtime!();

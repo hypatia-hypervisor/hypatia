@@ -18,6 +18,6 @@ seq-macro = "*"
 static_assertions = "*"
 zerocopy = "*"
 goblin = { version = "*", default-features = false, features = ["endian_fd", "elf64", "elf32", "archive"] }
-libhypatia = { path = "../libhypatia" }
+hypatia = { path = "../hypatia" }
 uart = { path = "../uart" }
 arch = { package = "x86_64", path = "../x86_64" }
