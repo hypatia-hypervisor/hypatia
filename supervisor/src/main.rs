@@ -15,4 +15,4 @@
 #[no_mangle]
 pub extern "C" fn init() {}
 
-libhypatia::runtime!();
+hypatia::runtime!();

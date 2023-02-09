@@ -26,4 +26,4 @@ pub extern "C" fn init() {
     zero_page();
 }
 
-libhypatia::runtime!();
+hypatia::runtime!();

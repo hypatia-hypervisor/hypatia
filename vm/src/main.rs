@@ -21,4 +21,4 @@ pub extern "C" fn start() {
     }
 }
 
-libhypatia::runtime!();
+hypatia::runtime!();

@@ -17,4 +17,4 @@ pub extern "C" fn init() {
     uart::panic_println!("Hi from the monitor");
 }
 
-libhypatia::runtime!();
+hypatia::runtime!();

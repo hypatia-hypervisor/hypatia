@@ -6,7 +6,7 @@
 # https://opensource.org/licenses/MIT.
 
 [package]
-name = "libhypatia"
+name = "hypatia"
 version = "0.1.0"
 edition = "2021"
 
