@@ -219,6 +219,6 @@ pub unsafe extern "C" fn trap() -> ! {
     }
 }
 
-fn dispatch(_vector: u8, _trap_frame: &mut Frame) -> u32 {
+extern "C" fn dispatch(_vector: u8, _trap_frame: &mut Frame) -> u32 {
     0
 }

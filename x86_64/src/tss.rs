@@ -88,8 +88,8 @@ impl TSS {
 
     pub fn set_stack(&mut self, index: StackIndex, stack: &mut HyperStack) {
         let va = stack.top().addr() as u64;
-        let lower = va as u32;
-        let upper = (va >> 32) as u32;
+        let lower = va.get_bits(0..32) as u32;
+        let upper = va.get_bits(32..64) as u32;
         match index {
             StackIndex::Rsp0 => {
                 self.rsp0_lower = lower;
