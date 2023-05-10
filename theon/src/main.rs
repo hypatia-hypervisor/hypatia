@@ -6,10 +6,14 @@
 // https://opensource.org/licenses/MIT.
 
 #![feature(allocator_api)]
+#![feature(if_let_guard)]
 #![feature(inline_const)]
 #![feature(naked_functions)]
+#![feature(pointer_is_aligned)]
+#![feature(ptr_from_ref)]
 #![feature(ptr_sub_ptr)]
 #![feature(strict_provenance)]
+
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 #![forbid(absolute_paths_not_starting_with_crate)]
@@ -135,7 +139,7 @@ const BINARY_LOAD_REGION_END: HPA = load_addr(BINARY_TABLE.len());
 /// physical address space are mapped R/W at
 /// arch::HYPER_BASE_VADDR.  Note that the memory
 /// regions that make up both the binary archive
-/// as well as our load regions are mapped within
+/// as well as our load areas are mapped within
 /// this region, so we can address them via pointers.
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
@@ -165,6 +169,9 @@ pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     // Start other CPUs.
     uart::panic_println!("starting APs");
     unsafe {
+        let rsdp = crate::x86_64::platform::acpi::init();
+        uart::panic_println!("rsdp = {:#x?}", rsdp);
+        crate::x86_64::platform::acpi::parse(rsdp.unwrap());
         mp::start_aps(cpus());
     }
     panic!("main: trapstubs = {:#x?}", arch::trap::stubs as usize);

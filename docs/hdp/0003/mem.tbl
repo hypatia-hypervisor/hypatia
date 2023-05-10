@@ -100,4 +100,17 @@ _,_,
 480, Task,
 ,, -16 TiB
 _,_,
+.T&
+l c.
+,\.
+,\.
+,(Reserved)
+,\.
+,\.
+.T&
+| l | l | l.
+_,_,
+448, Temporary Mapping Region,,
+,, -32 TiB
+_,_,
 .TE
