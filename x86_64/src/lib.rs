@@ -503,3 +503,17 @@ impl From<ProcessorID> for u32 {
         id.0
     }
 }
+
+/// An IOAPIC.
+#[derive(Clone, Copy, Debug)]
+pub struct IOAPIC {
+    id: u32,   // IOAPIC ID
+    hpa: HPA,  // Base physical address
+    gsib: u32, // Global system interrupt base
+}
+
+impl IOAPIC {
+    pub fn new(id: u32, hpa: HPA, gsib: u32) -> IOAPIC {
+        IOAPIC { id, hpa, gsib }
+    }
+}

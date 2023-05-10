@@ -349,6 +349,7 @@ name = "theon"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.9.1",
+ "bitstruct",
  "goblin",
  "hypatia",
  "multiboot",
