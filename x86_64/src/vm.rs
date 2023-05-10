@@ -19,6 +19,7 @@ use core::sync::atomic::{AtomicU64, Ordering};
 pub type Result<T> = core::result::Result<T, &'static str>;
 
 bitflags! {
+    #[derive(Clone, Copy, Debug)]
     pub struct PTEFlags: u64 {
         const PRESENT = 1;
         const WRITE   = 1 << 1;
@@ -69,13 +70,13 @@ impl PTE {
 
     /// Sets the "PRESENT" bit in the PTE.
     pub fn enable(&self) {
-        self.0.fetch_or(PTEFlags::PRESENT.bits, Ordering::AcqRel);
+        self.0.fetch_or(PTEFlags::PRESENT.bits(), Ordering::AcqRel);
     }
 
     /// Clears the present bit in the PTE, disabling access to the region
     /// it describes.
     pub fn disable(&self) {
-        self.0.fetch_and(!PTEFlags::PRESENT.bits, Ordering::AcqRel);
+        self.0.fetch_and(!PTEFlags::PRESENT.bits(), Ordering::AcqRel);
     }
 
     /// Assign self the value of the given PTE.

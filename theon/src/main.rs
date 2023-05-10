@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#![feature(alloc_error_handler)]
 #![feature(allocator_api)]
 #![feature(inline_const)]
 #![feature(naked_functions)]
@@ -149,7 +148,7 @@ pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     uart::panic_println!("end = {:016x?}", theon::end_addr());
     uart::panic_println!("regions: {:#x?}", regions);
     // TODO(cross): We really ought to clean this up.
-    let bins = modules.iter().find(|m| m.name == Some("bin.a")).expect("found 'bin.a' in modules");
+    let bins = modules.iter().find(|&m| m.name == Some("bin.a")).expect("found 'bin.a' in modules");
     assert!(
         unsafe { bins.bytes.as_ptr().add(bins.bytes.len()) }.addr()
             < theon::vaddr(BINARY_LOAD_REGION_START).addr()
