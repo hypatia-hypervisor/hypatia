@@ -23,6 +23,7 @@ members = [
     "x86_64",
     "xtask",
 ]
+resolver = "2"
 
 [profile.dev]
 panic = "abort"
