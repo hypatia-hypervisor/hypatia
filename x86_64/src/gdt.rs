@@ -109,6 +109,7 @@ impl GDT {
 /// # Safety
 ///
 /// Must be called on a valid, initialized GDT.
+#[allow(clippy::needless_pass_by_ref_mut)]
 pub unsafe fn load(gdt: &'static mut GDT) {
     unsafe {
         gdt.lgdt();

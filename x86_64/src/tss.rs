@@ -86,6 +86,7 @@ impl TSS {
         }
     }
 
+    #[allow(clippy::needless_pass_by_ref_mut)]
     pub fn set_stack(&mut self, index: StackIndex, stack: &mut HyperStack) {
         let va = stack.top().addr() as u64;
         let lower = va.get_bits(0..32) as u32;

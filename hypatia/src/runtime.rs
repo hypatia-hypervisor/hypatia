@@ -9,12 +9,13 @@
 #[macro_export]
 macro_rules! runtime {
     () => {
-        #[cfg(not(test))]
+        #[cfg(all(target_os="none"))]
         mod no_std_runtime {
             use core::panic::PanicInfo;
 
             #[panic_handler]
-            pub extern "C" fn panic(_info: &PanicInfo) -> ! {
+            pub extern "C" fn panic(info: &PanicInfo) -> ! {
+                hypatia::panic::print_panic(info);
                 #[allow(clippy::empty_loop)]
                 loop {}
             }

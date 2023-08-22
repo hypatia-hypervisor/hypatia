@@ -309,5 +309,4 @@ pub extern "C" fn apmain(cpu: arch::ProcessorID) -> ! {
     panic!("apmain");
 }
 
-#[cfg(not(test))]
-mod runtime;
+hypatia::runtime!();
