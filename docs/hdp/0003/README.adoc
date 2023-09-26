@@ -16,7 +16,7 @@ Tasks
 A task is the basic unit of scheduling in Hypatia; it is
 conceptually similar to a thread, but exists in its own address
 space.  In this sense, it is similar to a process, but tasks are
-cooperatively scheduled by explicit calls into a scheduler
+cooperatively scheduled by explicit calls into the scheduler
 segment.
 
 The set of tasks is small and all tasks are written in such a

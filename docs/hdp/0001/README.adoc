@@ -5,4 +5,101 @@
 Hypatia Engineering Processes
 =============================
 
-Discuss engineering processes used in Hypatia.
+Hypatia code is collaboratively developed using a standard set
+of open source tools:
+
+* Revision control uses the https://git-scm.org[`git`] source
+  control tool
+* The system is hosted on
+  https://github.com/hypatia-hypervisor/hypatia.git[Github]
+* We use the github pull-request model and code review tools
+  for collaborative development
+* The bulk of the software is written in Rust, with some parts
+  written in assembly language.
+
+Prerequisites
+-------------
+To work on Hypatia, one must first install a small set of
+prerequisites.  Notably, one must install the `git` tools for
+revision control, and the Rust toolchain.  Consult your local
+system documentation for the preferred way to install `git`;
+most engineers use the https://rustup.sh[`rustup`] tool to
+maintain the Rust installation.
+
+It can be very useful to install `qemu` for testing.  Again,
+consult your local package manager documentation for details.
+
+Source Control
+--------------
+The source code is hosted under the `hypatia-hypervisor` project
+on Github, in the `hypatia` repository; the canonical repository
+location is:
+
+https://github.com/hypatia-hypervisor/hypatia.git
+
+To check out the code, one may use:
+
+```
+git clone https://github.com/hypatia-hypervisor/hypatia.git
+```
+
+Building Hypatia
+----------------
+We use the `cargo` tool with the `xtask` polyfill to build most
+the system.  Run,
+
+```
+cargo xtask --help
+```
+
+to see what subcommands are available and their options.
+Highlights include,
+
+`cargo xtask build`:: Builds hypatia
+`cargo xtask test`:: Run unit tests
+`cargo xtask qemu`:: Boot hypatia under qemu (requires KVM)
+`cargo xtask clippy`:: Run the `clippy` linter
+
+Additionally, the `cargo check` command is supported for editor integration.
+
+Documentation
+-------------
+Hypatia is documented in Hypatia Design Proposals, or HDPs ---
+like the one that you are currently reading.  These are either
+Markdown or asciidoc source files in numbered subdirectories
+under the `docs` directory in the repository root.
+
+General Development Workflows
+-----------------------------
+The Hypatia repository follows a linear history model; changes
+are rebased onto the `main` branch.
+
+In general, one will do local development in a branch of their
+choosing, and, once they feel that they are ready for a commit
+they will submit a pull request for integration into `main`.
+All non-trivial changes must be reviewed and approved by another
+engineer.  There is also continuous integration support that
+runs workflows that enforce that code is lint-free,
+well-formatted, and that all tests pass.
+
+Each commit should have a well-written, grammatically correct
+change message that gives a high-level overview of commit's
+contents and the purpose of the change.  Commit messages may
+freely reference Github issues, mark things as fixed, etc.  All
+commits must be signed-off by the author (`git -s`).
+
+Multi-commit changes are allowed.  However, each commit should
+stand alone in the sense that compiles and passes all tests, and
+the commits in the pull request should be logically related.
+Put colloquially, the commits in a request should "tell a
+story."  Each such commit must be separately signed-off on.
+
+A common development practice is to do rough development work in
+a `wip` branch, committing frequently, possibly with less than
+stellar commit messages, and then squash-merge this the result
+into one or more commits with proper commit messages in a new
+branch when ready for sending a PR: this gives a developer
+flexibility to checkpoint their work often, be experimental, and
+generally explore the problem space before committing to a
+stable solution, while also keeping the overall commit history
+clean.
