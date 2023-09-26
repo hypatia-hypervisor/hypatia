@@ -5,9 +5,9 @@
 Hypatia Design Proposals
 ========================
 
-Hypatia is described using a set of design proposals.
-These loosely follow the Oxide RFD format, and are
-in `asciidoc`.
+Hypatia is described using a set of design proposals.  These
+loosely follow the Oxide RFD format, and are in `asciidoc` or
+`markdown`.
 
 They go through states:
 
@@ -18,3 +18,7 @@ They go through states:
 * abandoned
 
 We use a consensus model.
+
+TODO(cross): It would be nice to have some mechanism for
+hierarchical documents to aid discoverability and keeping things
+up to date.

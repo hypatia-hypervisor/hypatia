@@ -43,7 +43,7 @@ resource allocation, runs device drivers, etc.
 
 Driver VM::
 A special class of VM provided to run a device driver and
-provide services to the hypervisor, but not provide general
+provide services to the hypervisor, but does not provide general
 computation.
 
 Segment::
@@ -73,4 +73,8 @@ A transfer vector is a jump table at some well-known location
 relative to the start of a segment.  That is, it is a table
 indexed by a function identifier that points to executable code
 within a segment.  One may think of it as an array of function
-pointers.
+pointers.  Transfer vectors allow for inter-segment linkage and
+function calls into the segment from e.g. tasks or other
+segments.  These are deliberately chosen, as opposed to other,
+more traditional forms of linkage, to keep the interfaces
+exposed by segments small and decoupled.
