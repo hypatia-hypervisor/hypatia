@@ -13,6 +13,8 @@
 
 use arch::io::Sender;
 
+mod vmx;
+
 #[unsafe(no_mangle)]
 pub extern "C" fn start() {
     let mut port = arch::io::OutPort::new(0x3f8);
