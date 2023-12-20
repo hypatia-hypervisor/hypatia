@@ -14,7 +14,7 @@ macro_rules! runtime {
             use core::panic::PanicInfo;
 
             #[panic_handler]
-            pub extern "C" fn panic(info: &PanicInfo) -> ! {
+            pub fn panic(info: &PanicInfo) -> ! {
                 hypatia::panic::print_panic(info);
                 #[allow(clippy::empty_loop)]
                 loop {}

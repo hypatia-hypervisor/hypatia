@@ -18,4 +18,4 @@ bit_field = "*"
 bitstruct = "*"
 seq-macro = "*"
 x86 = "*"
-zerocopy = "*"
+zerocopy = { version = "*", features = [ "derive" ] }
