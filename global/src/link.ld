@@ -1,5 +1,5 @@
 /*
- * Copyright 2021  The Hypatia Authors
+ * Copyright 2023  The Hypatia Authors
  * All rights reserved
  *
  * Use of this source code is governed by an MIT-style
@@ -9,8 +9,16 @@
 
 ENTRY(init)
 
+EXTERN(xferv);
+
 SECTIONS {
 	. = 0xFFFFFC0000000000;
+
+	.xferv . :
+	{
+		KEEP(*(.xferv*))
+	}
+	. = ALIGN(4096);
 
 	.text . :
 	{
