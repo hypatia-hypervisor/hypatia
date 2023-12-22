@@ -9,7 +9,7 @@
 #[macro_export]
 macro_rules! runtime {
     () => {
-        #[cfg(all(target_os = "none"))]
+        #[cfg(not(test))]
         mod no_std_runtime {
             use core::panic::PanicInfo;
 
