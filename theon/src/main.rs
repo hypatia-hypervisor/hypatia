@@ -140,7 +140,7 @@ const BINARY_LOAD_REGION_END: HPA = load_addr(BINARY_TABLE.len());
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     arch::lapic::enable_x2apic();
-    let multiboot = x86_64::pc::init::start(mbinfo_phys);
+    let multiboot = x86_64::platform::init::start(mbinfo_phys);
     let crate::x86_64::pc::multiboot1::InitInfo { memory_regions, regions, modules } =
         multiboot.info();
     assert!(theon_fits(&regions));
