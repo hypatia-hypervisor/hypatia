@@ -8,6 +8,7 @@
 use crate::theon;
 use crate::x86_64::memory;
 use alloc::vec::Vec;
+use core::ptr;
 use multiboot::information::{MemoryManagement, MemoryType, Multiboot, PAddr};
 
 unsafe fn phys_to_slice(phys_addr: PAddr, len: usize) -> Option<&'static [u8]> {
@@ -34,8 +35,6 @@ impl MemoryManagement for MM {
         }
     }
 }
-
-static mut MULTIBOOT_MM: MM = MM {};
 
 fn theon_region() -> memory::Region {
     let start = 0x0000_0000_0010_0000_u64;
@@ -97,8 +96,11 @@ pub(crate) struct Multiboot1 {
 
 impl Multiboot1 {
     pub(crate) fn new(mbinfo_phys: u64) -> Multiboot1 {
-        let multiboot =
-            unsafe { Multiboot::from_ptr(mbinfo_phys as PAddr, &mut MULTIBOOT_MM).unwrap() };
+        let multiboot = unsafe {
+            static mut MULTIBOOT_MM: MM = MM {};
+            let ptr = ptr::addr_of_mut!(MULTIBOOT_MM);
+            Multiboot::from_ptr(mbinfo_phys as PAddr, &mut *ptr).unwrap()
+        };
         Multiboot1 { multiboot }
     }
 

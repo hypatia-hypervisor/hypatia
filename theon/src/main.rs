@@ -245,6 +245,7 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
     let base = theon::vaddr(region.start).cast_mut();
     let len = unsafe { theon::vaddr(region.end).sub_ptr(theon::vaddr(region.start)) };
     let heap = unsafe { core::slice::from_raw_parts_mut(base, len) };
+    let heap = allocator::SliceHeap::new(heap);
     let bump = allocator::BumpAlloc::new(heap);
     let allocate = || {
         use alloc::alloc::GlobalAlloc;
