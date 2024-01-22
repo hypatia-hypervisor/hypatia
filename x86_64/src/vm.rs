@@ -141,18 +141,24 @@ impl core::fmt::Debug for PTE {
 
 trait Entry {}
 
+#[repr(u64)]
 enum L4E {
+    #[allow(dead_code)]
     Next(PTE),
 }
 impl Entry for L4E {}
 
+#[repr(u64)]
 enum L3E {
+    #[allow(dead_code)]
     Next(PTE),
     Page(PF1G),
 }
 impl Entry for L3E {}
 
+#[repr(u64)]
 enum L2E {
+    #[allow(dead_code)]
     Next(PTE),
     Page(PF2M),
 }
