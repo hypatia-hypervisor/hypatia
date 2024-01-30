@@ -6,7 +6,7 @@
 // https://opensource.org/licenses/MIT.
 
 use crate::x86_64::pc::multiboot1;
-use core::ptr;
+use core::cell::SyncUnsafeCell;
 use core::sync::atomic::{AtomicBool, Ordering};
 
 pub(crate) fn start(mbinfo_phys: u64) -> multiboot1::Multiboot1 {
@@ -14,16 +14,21 @@ pub(crate) fn start(mbinfo_phys: u64) -> multiboot1::Multiboot1 {
     if INITED.swap(false, Ordering::SeqCst) {
         panic!("double init");
     }
-    static mut IDT: arch::idt::IDT = arch::idt::IDT::empty();
-    static mut GDT: arch::gdt::GDT = arch::gdt::GDT::empty();
-    static mut TSS: arch::tss::TSS = arch::tss::TSS::empty();
+    static IDT: SyncUnsafeCell<arch::idt::IDT> = SyncUnsafeCell::new(arch::idt::IDT::empty());
+    static GDT: SyncUnsafeCell<arch::gdt::GDT> = SyncUnsafeCell::new(arch::gdt::GDT::empty());
+    static TSS: SyncUnsafeCell<arch::tss::TSS> = SyncUnsafeCell::new(arch::tss::TSS::empty());
 
     uart::panic_println!("\nBooting Hypatia...");
+    let idt = unsafe { &mut *IDT.get() };
+    idt.init(arch::trap::stubs());
     unsafe {
-        IDT.init(arch::trap::stubs());
-        arch::idt::load(&mut *ptr::addr_of_mut!(IDT));
-        GDT.init(&*ptr::addr_of!(TSS));
-        arch::gdt::load(&mut *ptr::addr_of_mut!(GDT));
+        arch::idt::load(idt);
+    }
+    let tss = unsafe { &*TSS.get() };
+    let gdt = unsafe { &mut *GDT.get() };
+    gdt.init(tss);
+    unsafe {
+        arch::gdt::load(gdt);
     }
     multiboot1::init(mbinfo_phys)
 }

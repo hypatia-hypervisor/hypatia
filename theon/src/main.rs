@@ -10,6 +10,7 @@
 #![feature(naked_functions)]
 #![feature(ptr_sub_ptr)]
 #![feature(strict_provenance)]
+#![feature(sync_unsafe_cell)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
 #![forbid(absolute_paths_not_starting_with_crate)]

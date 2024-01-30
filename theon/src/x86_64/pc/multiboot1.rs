@@ -8,7 +8,7 @@
 use crate::theon;
 use crate::x86_64::memory;
 use alloc::vec::Vec;
-use core::ptr;
+use core::cell::SyncUnsafeCell;
 use multiboot::information::{MemoryManagement, MemoryType, Multiboot, PAddr};
 
 unsafe fn phys_to_slice(phys_addr: PAddr, len: usize) -> Option<&'static [u8]> {
@@ -97,9 +97,9 @@ pub(crate) struct Multiboot1 {
 impl Multiboot1 {
     pub(crate) fn new(mbinfo_phys: u64) -> Multiboot1 {
         let multiboot = unsafe {
-            static mut MULTIBOOT_MM: MM = MM {};
-            let ptr = ptr::addr_of_mut!(MULTIBOOT_MM);
-            Multiboot::from_ptr(mbinfo_phys as PAddr, &mut *ptr).unwrap()
+            static MULTIBOOT_MM: SyncUnsafeCell<MM> = SyncUnsafeCell::new(MM {});
+            let mm = &mut *MULTIBOOT_MM.get();
+            Multiboot::from_ptr(mbinfo_phys as PAddr, mm).unwrap()
         };
         Multiboot1 { multiboot }
     }
