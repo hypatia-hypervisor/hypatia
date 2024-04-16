@@ -12,9 +12,12 @@
 #![forbid(elided_lifetimes_in_paths)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
+mod cons;
+
 #[no_mangle]
 pub extern "C" fn init() {
     uart::panic_println!("Hi from the monitor");
+    cons::repl();
 }
 
 hypatia::runtime!();

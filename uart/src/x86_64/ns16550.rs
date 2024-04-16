@@ -32,6 +32,10 @@ impl Uart {
         arch::io::OutPort::new(self.0)
     }
 
+    fn rbr(&mut self) -> arch::io::InPort<u8> {
+        arch::io::InPort::new(self.0)
+    }
+
     fn tx_ready(&mut self) -> bool {
         let mut lsr = self.lsr();
         let b = lsr.recv();
@@ -43,6 +47,19 @@ impl Uart {
             arch::cpu::relax();
         }
         self.thr().send(b);
+    }
+
+    pub fn rx_ready(&mut self) -> bool {
+        let mut lsr = self.lsr();
+        let b = lsr.recv();
+        b.get_bit(0)
+    }
+
+    pub fn getb(&mut self) -> u8 {
+        while !self.rx_ready() {
+            arch::cpu::relax();
+        }
+        self.rbr().recv()
     }
 }
 
