@@ -139,6 +139,8 @@ impl core::fmt::Debug for PTE {
     }
 }
 
+// XXX: Figure out why Rust thinks this Entry is unused.
+#[allow(dead_code)]
 trait Entry {}
 
 #[repr(u64)]

@@ -6,6 +6,7 @@
 // https://opensource.org/licenses/MIT.
 
 #![feature(allocator_api)]
+#![feature(exposed_provenance)]
 #![feature(inline_const)]
 #![feature(naked_functions)]
 #![feature(ptr_sub_ptr)]
@@ -288,7 +289,7 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
         arch::vm::unmap_root_ranges(&regions);
     } else {
         let entry = elf.entry as usize;
-        let init = unsafe { core::mem::transmute::<_, fn()>(entry) };
+        let init = unsafe { core::mem::transmute::<usize, fn()>(entry) };
         init();
     }
     Ok(root)
