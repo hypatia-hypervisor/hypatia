@@ -45,6 +45,7 @@
 
 #![feature(asm_const)]
 #![feature(assert_matches)]
+#![feature(fn_align)]
 #![feature(naked_functions)]
 #![feature(step_trait)]
 #![feature(strict_provenance)]

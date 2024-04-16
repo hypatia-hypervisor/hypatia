@@ -56,11 +56,11 @@ const TRAPFRAME_CS_OFFSET: usize = 22 * core::mem::size_of::<u64>();
 pub struct Stub(usize);
 
 macro_rules! gen_stub {
-    ($vecnum:literal) => {
-        concat!(r#".balign 8; pushq $0; callq {trap}; .byte "#, $vecnum, ";")
+    () => {
+        r#".balign 8; pushq $0; callq {trap};"#
     };
-    ($vecnum:literal, err) => {
-        concat!(r#".balign 8; callq {trap}; .byte "#, $vecnum, ";")
+    (err) => {
+        r#".balign 8; callq {trap};"#
     };
 }
 
@@ -68,29 +68,29 @@ macro_rules! gen_trap_stub {
     // These cases include hardware-generated error words
     // on the trap frame
     (8) => {
-        gen_stub!(8, err)
+        gen_stub!(err)
     };
     (10) => {
-        gen_stub!(10, err)
+        gen_stub!(err)
     };
     (11) => {
-        gen_stub!(11, err)
+        gen_stub!(err)
     };
     (12) => {
-        gen_stub!(12, err)
+        gen_stub!(err)
     };
     (13) => {
-        gen_stub!(13, err)
+        gen_stub!(err)
     };
     (14) => {
-        gen_stub!(14, err)
+        gen_stub!(err)
     };
     (17) => {
-        gen_stub!(17, err)
+        gen_stub!(err)
     };
     // No hardware error
     ($num:literal) => {
-        gen_stub!($num)
+        gen_stub!()
     };
 }
 
@@ -104,6 +104,7 @@ pub fn stubs() -> &'static [Stub; 256] {
 #[allow(dead_code)]
 #[link_section = ".trap"]
 #[naked]
+#[repr(align(4096))]
 pub unsafe extern "C" fn trap_stubs() -> ! {
     unsafe {
         asm!(
@@ -157,17 +158,21 @@ pub unsafe extern "C" fn trap() -> ! {
             movq %rdi, 15*8(%rsp);
             // Fix up the vector number.  We got into `trap` via
             // a CALL, so hardware pushed the address after the
-            // CALLQ instruction onto the stack, and the byte at
-            // that location is the vector number from the stub.
-            // Load the "return" address from the stack, then
-            // MOVZBQ what that points to into %rdi, and store
-            // back in the save area.
+            // CALLQ instruction onto the stack.  But we know
+            // that each stub is aligned to an 8-byte boundary,
+            // at some offset based on the vector number
+            // relative to the 4096-byte aligned start of the
+            // trap stub array.  Further, each stub is shorter
+            // than 8 bytes in length.  Thus, we can compute the
+            // vector number by dividing the return address by
+            // 8, masking off the high bits, and storing it back
+            // into the save area.
             //
             // The vector number is an argument to the dispatch
             // function, along with the address of the register
             // save area at the top of the stack.
-            movq {vector_offset}(%rsp), %rdi;
-            movzbq (%rdi), %rdi;
+            shrw $3, {vector_offset}(%rsp);
+            movzbl {vector_offset}(%rsp), %edi;
             movq %rdi, {vector_offset}(%rsp);
             movq %rsp, %rsi;
             // If we're already in kernel mode, don't swap %gs.
