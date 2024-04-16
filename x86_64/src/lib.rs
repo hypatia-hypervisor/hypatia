@@ -134,7 +134,13 @@ impl Page4K {
 
     /// Returns an invalid pointer.
     pub const fn proto_ptr() -> *const Page4K {
-        core::ptr::invalid(0)
+        core::ptr::without_provenance(0)
+    }
+}
+
+impl Default for Page4K {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

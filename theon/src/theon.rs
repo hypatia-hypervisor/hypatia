@@ -30,7 +30,7 @@ pub(crate) fn apstart() -> &'static [u8] {
 }
 
 /// The start of Theon's virtual address space.
-pub(crate) const VZERO: *const u8 = core::ptr::invalid(0xFFFF_8000_0000_0000);
+pub(crate) const VZERO: *const u8 = core::ptr::without_provenance(0xFFFF_8000_0000_0000);
 
 /// Returns the raw virtual address of the given HPA relative
 /// to theon's address space.
