@@ -6,8 +6,8 @@
 // https://opensource.org/licenses/MIT.
 
 #![feature(allocator_api)]
+#![feature(const_mut_refs)]
 #![feature(exposed_provenance)]
-#![feature(inline_const)]
 #![feature(naked_functions)]
 #![feature(ptr_sub_ptr)]
 #![feature(strict_provenance)]
@@ -246,18 +246,13 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
     }
     let base = theon::vaddr(region.start).cast_mut();
     let len = unsafe { theon::vaddr(region.end).sub_ptr(theon::vaddr(region.start)) };
-    let heap = unsafe { core::slice::from_raw_parts_mut(base, len) };
-    let heap = allocator::SliceHeap::new(heap);
+    let heap = unsafe { allocator::Block::new_from_raw_parts(base, len) };
     let bump = allocator::BumpAlloc::new(heap);
     let allocate = || {
-        use alloc::alloc::GlobalAlloc;
-
+        use alloc::alloc::Allocator;
         let layout = alloc::alloc::Layout::new::<Page4K>();
-        let mem = unsafe { bump.alloc(layout) };
-        if mem.is_null() {
-            return Err("failed to allocate page");
-        }
-        let page = unsafe { &mut *Page4K::proto_ptr().with_addr(mem.addr()).cast_mut() };
+        let mem = bump.allocate(layout).map_err(|_| "failed to allocatoe page")?;
+        let page = unsafe { &mut *Page4K::proto_ptr().with_addr(mem.addr().into()).cast_mut() };
         Ok(page)
     };
     let root = allocate().expect("allocated root page for binary");
