@@ -10,32 +10,30 @@ use core::ptr::NonNull;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use core::{mem, ptr};
 
-/// The allocator works in terms of an owned region of memory.
-/// We call this a heap, but it is represented by a Block, which
-/// defines it in terms of a non-nil pointer and a length.
-///
-/// A Block is a heap defined by a base pointer and a length.
-/// It is an analogue of a mutable slice.
+/// The allocator works in terms of an owned region of memory
+/// that is represented by a Block, which describes the region
+/// in terms of a non-nil pointer and a length.  A Block is an
+/// analogue of a mutable slice.
 ///
 /// At some point, it may make sense to replace this with a
 /// slice pointer, but too many of the interfaces there are not
 /// (yet) stable.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Block {
-    heap: NonNull<u8>,
+    ptr: NonNull<u8>,
     len: usize,
 }
 
 impl Block {
-    /// Creates a new block from raw parts, analogous to
-    /// `core::slice::from_raw_parts`.
+    /// Creates a new block from raw parts.  This is analogous
+    /// to `core::slice::from_raw_parts`.
     ///
     /// # Safety
     /// The caller must ensure that the pointer and length given
     /// are appropriate for the construction of a new block.
-    pub const unsafe fn new_from_raw_parts(heap: *mut u8, len: usize) -> Block {
-        let heap = unsafe { NonNull::new_unchecked(heap) };
-        Block { heap, len }
+    pub const unsafe fn new_from_raw_parts(ptr: *mut u8, len: usize) -> Block {
+        let ptr = unsafe { NonNull::new_unchecked(ptr) };
+        Block { ptr, len }
     }
 
     /// Splits a block into two sub-blocks.
@@ -50,39 +48,41 @@ impl Block {
         Some((a, b))
     }
 
+    /// Returns a raw mutable pointer to the beginning of the
+    /// owned region.
     pub fn as_ptr(self) -> *mut u8 {
-        self.heap.as_ptr()
+        self.ptr.as_ptr()
     }
 
+    /// Returns the length of the region.
     pub fn len(self) -> usize {
         self.len
     }
 }
 
-/// A Bump Allocator takes ownership a region of memory
-/// represented by a Block, and maintains a cursor into
-/// that region.  The cursor denotes the point between
-/// allocated and unallocated memory.
+/// A Bump Allocator takes ownership a region of memory, called
+/// an "arena", represented by a Block, and maintains a cursor
+/// into that region.  The cursor denotes the point between
+/// allocated and unallocated memory in the arena.
 pub(crate) struct BumpAlloc {
     arena: Block,
     cursor: AtomicUsize,
 }
 
 impl BumpAlloc {
-    /// Creates a new bump allocator, taking ownership of the
-    /// provided arena.
+    /// Creates a new bump allocator over the given Block.
+    /// Takes ownership of the provided region.
     pub(crate) const fn new(arena: Block) -> BumpAlloc {
         BumpAlloc { arena, cursor: AtomicUsize::new(0) }
     }
 
-    /// Allocates the given number of bytes with the given
+    /// Allocates the requested number of bytes with the given
     /// alignment.  Returns `None` if the allocation cannot be
     /// satisfied, otherwise returns `Some` of a pair of blocks:
     /// the first contains the prefix before the (aligned) block
-    /// and the second is the requested block.
+    /// and the second is the requested block itself.
     pub(crate) fn try_alloc(&self, align: usize, size: usize) -> Option<(Block, Block)> {
-        let heap = self.arena;
-        let base = heap.as_ptr();
+        let base = self.arena.as_ptr();
         let mut first = ptr::null_mut();
         let mut adjust = 0;
         self.cursor
@@ -91,7 +91,7 @@ impl BumpAlloc {
                 adjust = first.align_offset(align);
                 let offset = current.checked_add(adjust).expect("alignment overflow");
                 let next = offset.checked_add(size).expect("size overflow");
-                (next <= heap.len()).then_some(next)
+                (next <= self.arena.len()).then_some(next)
             })
             .ok()?;
         let prefix = unsafe { Block::new_from_raw_parts(first, adjust) };
@@ -107,13 +107,25 @@ impl BumpAlloc {
 unsafe impl Allocator for BumpAlloc {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         let (_, block) = self.try_alloc(layout.size(), layout.align()).ok_or(AllocError)?;
-        Ok(NonNull::slice_from_raw_parts(block.heap, block.len()))
+        Ok(NonNull::slice_from_raw_parts(block.ptr, block.len()))
     }
 
     unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {
         unimplemented!();
     }
 }
+
+/// # QuickFit allocator for small objects.
+///
+/// This is an implementation of the QuickFit[Wei88] allocator
+/// for small objects, suitable for managing small heaps in
+/// memory constrained environments, such as boot loaders and
+/// standalone debuggers.
+///
+/// [Wei88] Charles B. Weinstock and William A. Wulf. 1988.
+/// Quick Fit: An Efficient Algorithm for Heap Storage
+/// Allocation.  ACM SIGPLAN Notices 23, 10 (Oct. 1988),
+/// 141-148.  https://doi.org/10.1145/51607.51619
 
 const ALLOC_UNIT_SHIFT: usize = 6;
 const ALLOC_UNIT_SIZE: usize = 1 << ALLOC_UNIT_SHIFT;
@@ -124,25 +136,24 @@ const MAX_QUICK_SIZE: usize = 1 << MAX_QUICK_SHIFT;
 const NUM_QLISTS: usize = 14 - ALLOC_UNIT_SHIFT + 1;
 const NUM_HASH_BUCKETS: usize = 31; // Prime.
 
-/// A linked block header, containing size, alignment, and
+/// A linked block header containing size, alignment, and
 /// address information for the block.  This is used both for
 /// linking unallocated blocks into one of the free lists and
-/// for keeping track of blocks allocated from the `misc`
-/// list.
+/// for keeping track of blocks allocated from the `misc` list.
 ///
 /// For irregularly sized allocations, the header keeps track of
 /// the block's layout data, its virtual address, and a link
 /// pointer.  Such a header is either not in any list, if newly
 /// allocated and not yet freed, or always in exactly one of two
 /// lists: the free list, or a hash chain of allocated blocks.
-/// We need some way to preserve the allocation size after the
-/// initial allocation from the tail, and Because misc blocks
-/// can be reused in a first-fit manner, we cannot rely on a
-/// `Layout` to recover the size of the block, so we must store
-/// it somewhere.  By allocating a tag outside of the buffer,
-/// which we look up in a hash table as needed, we can maintain
-/// this information without adding additional complexity to
-/// allocation.
+/// We do this because we need some way to preserve the
+/// allocation size after the initial allocation from the tail,
+/// and because misc blocks can be reused in a first-fit manner,
+/// we cannot rely on a `Layout` to recover the size of the
+/// block, so we must store it somewhere.  By allocating a tag
+/// outside of the buffer, which we look up in a hash table as
+/// needed, we can maintain this information without adding
+/// additional complexity to allocation.
 ///
 /// For blocks on one of the quick lists, the size, address and
 /// alignment fields are redundant, but convenient.
@@ -159,24 +170,20 @@ struct Header {
 }
 
 impl Header {
-    /// Returns a new header for a block of the given size at
-    /// the given address.
+    /// Returns a new header for a block of the given size and
+    /// alignment at the given address.
     fn new(addr: NonNull<u8>, size: usize, align: usize, next: Option<NonNull<Header>>) -> Header {
         Header { next, addr, size, align }
     }
 }
 
-/// # QuickFit allocator for small objects.
-///
-/// This is an implementation of the QuickFit[Wei88] allocator
-/// for small objects, suitable for managing small heaps in
-/// memory constrained environments, such as boot loaders and
-/// standalone debuggers.
-///
-/// [Wei88] Charles B. Weinstock and William A. Wulf. 1988.
-/// Quick Fit: An Efficient Algorithm for Heap Storage
-/// Allocation.  ACM SIGPLAN Notices 23, 10 (Oct. 1988),
-/// 141-148.  https://doi.org/10.1145/51607.51619
+/// The QuickFit allocator itself.  The allocator takes
+/// ownership of a bump allocator for the tail, and contains a
+/// set of lists for the quick blocks, as well as a misc list
+/// for unusually sized regions, and a hash table of headers
+/// describing current misc allocations.  As mentioned above,
+/// these last data are kept outside of the allocations to keep
+/// allocation simple.
 #[repr(C)]
 pub struct QuickFit {
     tail: BumpAlloc,
@@ -233,7 +240,7 @@ impl QuickFit {
         }
     }
 
-    /// Allocates a block from the misc list.  A simple
+    /// Allocates a block from the misc list.  This is a simple
     /// first-fit allocator.
     fn alloc_misc(&mut self, size: usize, align: usize) -> Option<NonNull<u8>> {
         let (node, list) =
@@ -256,11 +263,11 @@ impl QuickFit {
     fn alloc_tail(&mut self, size: usize, align: usize) -> Option<NonNull<u8>> {
         let (prefix, block) = { self.tail.try_alloc(size, align)? };
         self.free_prefix(prefix);
-        Some(block.heap)
+        Some(block.ptr)
     }
 
     /// Frees a prefix that came from a tail allocation.  This
-    /// attempts to store blocks to the quick lists.
+    /// attempts to store blocks into the quick lists.
     fn free_prefix(&mut self, prefix: Block) {
         let mut prefix = Self::align_prefix(prefix);
         while let Some(rest) = self.try_free_prefix(prefix) {
@@ -308,8 +315,8 @@ impl QuickFit {
     /// accuracy of the `Layout` to find the correct quicklist
     /// to store the block onto on free.  If we reduced below
     /// the size of the current block, we would lose the layout
-    /// information and leak memory on free.  But this is very
-    /// uncommon.
+    /// information and potentially leak memory.  But this is
+    /// very uncommon.
     ///
     /// We make no effort to optimize the case of a `realloc` in
     /// a `misc` block, as a) it is relatively uncommon to do so
@@ -370,9 +377,9 @@ impl QuickFit {
     ///
     /// If we cannot allocate a header in the usual way, we take
     /// it from the block to be freed, which is guaranteed to be
-    /// large enough since anything smaller would have been
-    /// satisfied from one of the quick lists, and thus freed
-    /// through that path.
+    /// large enough to hold a header, since anything smaller
+    /// would have been allocated from one of the quick lists,
+    /// and thus freed through that path.
     fn free_misc(&mut self, mut block: NonNull<u8>, mut size: usize, mut align: usize) {
         let mut header = self
             .unlink_allocated_misc(block)
@@ -404,7 +411,9 @@ impl QuickFit {
 
     /// Unlinks the header for the given address from the hash
     /// table for allocated misc blocks and returns it, if such
-    /// a header exists.
+    /// a header exists.  If the block associated with the
+    /// address has not been freed yet, it's possible that no
+    /// header for it exists yet, in which case we return None.
     fn unlink_allocated_misc(&mut self, block: NonNull<u8>) -> Option<NonNull<Header>> {
         let k = Self::hash(block.as_ptr());
         let list = self.allocated_misc[k].take();
@@ -414,9 +423,9 @@ impl QuickFit {
     }
 
     /// Unlinks the first node matching the given predicate from
-    /// the given list, if it exists.  Returning the node, or
-    /// None, and the list head, which may be None if the list
-    /// is empty.
+    /// the given list, if it exists, returning the node, or
+    /// None, and the list head.  The list head will be None if
+    /// the list is empty.
     fn unlink<F>(
         mut list: Option<NonNull<Header>>,
         predicate: F,
@@ -470,8 +479,8 @@ mod global {
 
     const GLOBAL_HEAP_SIZE: usize = 4 * 1024 * 1024;
 
-    /// A GlobalHeap is an aligned wrapper around an
-    /// owned buffer that implements the Heap trait.
+    /// A GlobalHeap is an aligned wrapper around an owned
+    /// buffer.
     #[repr(C, align(4096))]
     struct GlobalHeap([u8; GLOBAL_HEAP_SIZE]);
     impl GlobalHeap {
