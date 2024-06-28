@@ -10,7 +10,7 @@ use uart::arch::Uart;
 pub(crate) type Error = core::convert::Infallible;
 pub(crate) type Result<T> = core::result::Result<T, Error>;
 
-fn readline<'a>(uart: &mut Uart, line: &'a mut [u8]) -> Result<&'a [u8]> {
+fn readline<'a>(uart: &mut Uart, prompt: &str, line: &'a mut [u8]) -> Result<&'a [u8]> {
     const BS: u8 = 8;
     const TAB: u8 = 9;
     const NL: u8 = 10;
@@ -19,17 +19,17 @@ fn readline<'a>(uart: &mut Uart, line: &'a mut [u8]) -> Result<&'a [u8]> {
     const CTLW: u8 = 23;
     const DEL: u8 = 127;
 
-    fn find_prev_col(line: &[u8]) -> usize {
-        line.iter().fold(0, |v, &b| v + if b == TAB { 8 - (v & 0b111) } else { 1 })
+    fn find_prev_col(line: &[u8], start: usize) -> usize {
+        line.iter().fold(start, |v, &b| v + if b == TAB { 8 - (v & 0b111) } else { 1 })
     }
 
-    fn backspace(uart: &mut Uart, line: &[u8], col: usize) -> (usize, usize) {
-        if line.is_empty() || col == 0 {
-            return (0, 0);
+    fn backspace(uart: &mut Uart, line: &[u8], start: usize, col: usize) -> (usize, usize) {
+        if line.is_empty() {
+            return (start, 0);
         }
         let (pcol, overstrike) = match line.last() {
             Some(&b' ') => (col - 1, false),
-            Some(&b'\t') => (find_prev_col(&line[..line.len() - 1]), false),
+            Some(&b'\t') => (find_prev_col(&line[..line.len() - 1], start), false),
             _ => (col - 1, true),
         };
         for _ in pcol..col {
@@ -50,8 +50,11 @@ fn readline<'a>(uart: &mut Uart, line: &'a mut [u8]) -> Result<&'a [u8]> {
         return Ok(line);
     }
 
+    let start = prompt.len();
     let mut k = 0;
-    let mut col = 0;
+    let mut col = start;
+
+    uart.puts(prompt);
     while k < line.len() {
         match uart.getb() {
             CR | NL => {
@@ -61,23 +64,23 @@ fn readline<'a>(uart: &mut Uart, line: &'a mut [u8]) -> Result<&'a [u8]> {
             }
             BS | DEL => {
                 if k > 0 {
-                    (col, k) = backspace(uart, &line[..k], col);
+                    (col, k) = backspace(uart, &line[..k], start, col);
                 }
             }
             CTLU => {
                 while k > 0 {
-                    (col, k) = backspace(uart, &line[..k], col);
+                    (col, k) = backspace(uart, &line[..k], start, col);
                 }
             }
             CTLW => {
                 while k > 0 && line[k - 1].is_ascii_whitespace() {
-                    (col, k) = backspace(uart, &line[..k], col);
+                    (col, k) = backspace(uart, &line[..k], start, col);
                 }
                 if k > 0 {
                     let cond = isword(line[k - 1]);
                     while k > 0 && !line[k - 1].is_ascii_whitespace() && isword(line[k - 1]) == cond
                     {
-                        (col, k) = backspace(uart, &line[..k], col);
+                        (col, k) = backspace(uart, &line[..k], start, col);
                     }
                 }
             }
@@ -106,7 +109,7 @@ pub(crate) fn repl() {
     let mut uart = Uart::new(uart::arch::Port::Eia0);
     let mut buf = [0u8; 1024];
     loop {
-        if let Ok(line) = readline(&mut uart, &mut buf) {
+        if let Ok(line) = readline(&mut uart, "@", &mut buf) {
             if line.is_empty() {
                 break;
             }

@@ -49,6 +49,12 @@ impl Uart {
         self.thr().send(b);
     }
 
+    pub fn puts(&mut self, s: &str) {
+        for b in s.bytes() {
+            self.putb(b);
+        }
+    }
+
     pub fn rx_ready(&mut self) -> bool {
         let mut lsr = self.lsr();
         let b = lsr.recv();
