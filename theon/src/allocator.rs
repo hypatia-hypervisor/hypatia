@@ -115,17 +115,17 @@ unsafe impl Allocator for BumpAlloc {
     }
 }
 
-/// # QuickFit allocator for small objects.
-///
-/// This is an implementation of the QuickFit[Wei88] allocator
-/// for small objects, suitable for managing small heaps in
-/// memory constrained environments, such as boot loaders and
-/// standalone debuggers.
-///
-/// [Wei88] Charles B. Weinstock and William A. Wulf. 1988.
-/// Quick Fit: An Efficient Algorithm for Heap Storage
-/// Allocation.  ACM SIGPLAN Notices 23, 10 (Oct. 1988),
-/// 141-148.  https://doi.org/10.1145/51607.51619
+// # QuickFit allocator for small objects.
+//
+// This is an implementation of the QuickFit[Wei88] allocator
+// for small objects, suitable for managing small heaps in
+// memory constrained environments, such as boot loaders and
+// standalone debuggers.
+//
+// [Wei88] Charles B. Weinstock and William A. Wulf. 1988.
+// Quick Fit: An Efficient Algorithm for Heap Storage
+// Allocation.  ACM SIGPLAN Notices 23, 10 (Oct. 1988),
+// 141-148.  https://doi.org/10.1145/51607.51619
 
 const ALLOC_UNIT_SHIFT: usize = 6;
 const ALLOC_UNIT_SIZE: usize = 1 << ALLOC_UNIT_SHIFT;

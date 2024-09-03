@@ -56,7 +56,7 @@
 use core::convert::TryFrom;
 use core::fmt::Debug;
 use core::iter::Step;
-use zerocopy::{FromBytes, FromZeroes};
+use zerocopy::{FromBytes};
 
 pub mod cpu;
 pub(crate) mod debug;
@@ -122,7 +122,7 @@ pub trait Page {
     }
 }
 
-#[derive(FromBytes, FromZeroes)]
+#[derive(FromBytes)]
 #[repr(C, align(4096))]
 pub struct Page4K([u8; 4 * KIB]);
 
