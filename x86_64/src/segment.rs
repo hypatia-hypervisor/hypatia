@@ -10,7 +10,7 @@
 //! 64-bit segmentation.
 //!
 
-use crate::{gdt, trap, StackIndex, CPL};
+use crate::{CPL, StackIndex, gdt, trap};
 
 use bit_field::BitField;
 use bitstruct::bitstruct;

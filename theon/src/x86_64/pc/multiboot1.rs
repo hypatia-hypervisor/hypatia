@@ -38,7 +38,7 @@ impl MemoryManagement for MM {
 
 fn theon_region() -> memory::Region {
     let start = 0x0000_0000_0010_0000_u64;
-    let phys_end = unsafe { theon::end_addr().sub_ptr(theon::VZERO) } as u64;
+    let phys_end = unsafe { theon::end_addr().offset_from_unsigned(theon::VZERO) } as u64;
     memory::Region { start, end: phys_end, typ: memory::Type::Loader }
 }
 
@@ -65,9 +65,9 @@ pub(crate) struct MultibootModule<'a> {
     pub name: Option<&'a str>,
 }
 
-impl<'a> MultibootModule<'a> {
+impl MultibootModule<'_> {
     fn region(&self) -> memory::Region {
-        let phys_start = unsafe { self.bytes.as_ptr().sub_ptr(theon::VZERO) };
+        let phys_start = unsafe { self.bytes.as_ptr().offset_from_unsigned(theon::VZERO) };
         let phys_end = phys_start.wrapping_add(self.bytes.len());
         memory::Region { start: phys_start as u64, end: phys_end as u64, typ: memory::Type::Module }
     }
@@ -78,7 +78,7 @@ fn parse_modules<'a>(mb: &'a Multiboot<'_, '_>) -> Option<Vec<MultibootModule<'a
         mb.modules()?
             .map(|m| MultibootModule {
                 bytes: unsafe { phys_to_slice(m.start, (m.end - m.start) as usize).unwrap() },
-                name: m.string.map(|name| name.split('/').last().unwrap()),
+                name: m.string.map(|name| name.split('/').next_back().unwrap()),
             })
             .collect(),
     )

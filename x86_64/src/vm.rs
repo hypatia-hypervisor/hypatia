@@ -10,7 +10,7 @@
 //! Hypatia uses recursive page tables with side-loading for
 //! address space inspection and manipulation.
 
-use crate::{Page, PageFrame, VPageAddr, HPA, PF1G, PF2M, PF4K, V1GA, V2MA, V4KA, V512GA};
+use crate::{HPA, PF1G, PF2M, PF4K, Page, PageFrame, V1GA, V2MA, V4KA, V512GA, VPageAddr};
 use bitflags::bitflags;
 use core::ops::Range;
 //use core::marker::PhantomData;    // XXX(cross): Not yet.
@@ -120,11 +120,7 @@ impl core::fmt::Debug for PTE {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let flags = self.flags();
         let flag_or = |f: PTEFlags, a, b| {
-            if flags.contains(f) {
-                a
-            } else {
-                b
-            }
+            if flags.contains(f) { a } else { b }
         };
         f.write_str(flag_or(PTEFlags::NX, "-", "X"))?;
         f.write_fmt(format_args!(":{:#x?}:", self.pfa().addr()))?;
@@ -267,11 +263,7 @@ impl Level for Level4 {
     const PAGE_SHIFT: usize = 39;
 
     fn decode(pte: PTE) -> Option<Self::EntryType> {
-        if pte.is_present() {
-            Some(L4E::Next(pte))
-        } else {
-            None
-        }
+        if pte.is_present() { Some(L4E::Next(pte)) } else { None }
     }
 }
 
@@ -319,11 +311,7 @@ impl Level for Level1 {
     const PAGE_SHIFT: usize = 12;
 
     fn decode(pte: PTE) -> Option<Self::EntryType> {
-        if !pte.is_present() {
-            None
-        } else {
-            Some(L1E::Page(PF4K(pte.pfa())))
-        }
+        if !pte.is_present() { None } else { Some(L1E::Page(PF4K(pte.pfa()))) }
     }
 }
 
@@ -852,7 +840,7 @@ mod tests {
 
     #[test]
     fn pte_debug() {
-        use super::{PTEFlags as F, HPA, PTE};
+        use super::{HPA, PTE, PTEFlags as F};
 
         let pte = PTE::new(HPA::new(0xabc000), F::NX | F::USER | F::WRITE | F::PRESENT);
         assert_eq!(format!("{:?}", pte), "-:0xabc000:-----UWR");

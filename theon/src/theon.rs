@@ -11,14 +11,14 @@ use arch::HPA;
 /// marks the end of the executable theon image loaded by the
 /// zeroth stage loader.
 pub(crate) fn end_addr() -> *const u8 {
-    extern "C" {
+    unsafe extern "C" {
         static end: [u8; 0];
     }
     unsafe { end.as_ptr() }
 }
 
 pub(crate) fn apstart() -> &'static [u8] {
-    extern "C" {
+    unsafe extern "C" {
         static apstart: [u8; 0];
         static eapstart: [u8; 0];
     }

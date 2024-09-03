@@ -138,11 +138,7 @@ struct Locked {
 }
 impl Locked {
     fn as_str(&self) -> &str {
-        if self.locked {
-            "--locked"
-        } else {
-            ""
-        }
+        if self.locked { "--locked" } else { "" }
     }
 }
 
