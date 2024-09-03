@@ -21,7 +21,7 @@ pub fn zero_page() -> &'static Page4K {
 }
 
 /// Initialize the system.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn init() {
     zero_page();
 }

@@ -5,10 +5,12 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
+cargo-features = ["edition2024"]
+
 [package]
 name = "vcpu"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 arch = { package = "x86_64", path = "../x86_64" }

@@ -65,7 +65,7 @@ pub(crate) struct MultibootModule<'a> {
     pub name: Option<&'a str>,
 }
 
-impl<'a> MultibootModule<'a> {
+impl MultibootModule<'_> {
     fn region(&self) -> memory::Region {
         let phys_start = unsafe { self.bytes.as_ptr().sub_ptr(theon::VZERO) };
         let phys_end = phys_start.wrapping_add(self.bytes.len());

@@ -14,7 +14,7 @@
 
 mod cons;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn init() {
     uart::panic_println!("Hi from the monitor");
     cons::repl();

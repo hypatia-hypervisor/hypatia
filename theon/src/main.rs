@@ -138,7 +138,7 @@ const BINARY_LOAD_REGION_END: HPA = load_addr(BINARY_TABLE.len());
 /// regions that make up both the binary archive
 /// as well as our load regions are mapped within
 /// this region, so we can address them via pointers.
-#[cfg_attr(not(test), no_mangle)]
+#[cfg_attr(not(test), unsafe(no_mangle))]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     arch::lapic::enable_x2apic();
     let multiboot = x86_64::platform::init::start(mbinfo_phys);
@@ -290,7 +290,7 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
 }
 
 #[cfg_attr(test, allow(dead_code))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn apmain(cpu: arch::ProcessorID) -> ! {
     use core::sync::atomic::{AtomicBool, Ordering};
     static S: AtomicBool = AtomicBool::new(false);

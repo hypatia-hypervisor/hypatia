@@ -21,7 +21,6 @@ use bit_field::BitField;
 /// u64 for things that are actually 64-bit quantities, we
 /// use the 32-bit half words and the C ABI to guarantee
 /// alignment and placement in the structure.
-
 #[repr(C)]
 pub struct TSS {
     _reserved0: u32,

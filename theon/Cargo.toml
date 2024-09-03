@@ -5,11 +5,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
+cargo-features = ["edition2024"]
+
 [package]
 name = "theon"
 version = "0.1.0"
 authors = ["Dan Cross <cross@oxide.computer>"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 bitflags = "*"

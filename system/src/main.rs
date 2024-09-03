@@ -12,7 +12,7 @@
 #![forbid(elided_lifetimes_in_paths)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn start() {}
 
 hypatia::runtime!();
