@@ -7,7 +7,7 @@
 
 use uart::arch::Uart;
 
-pub(crate) type Error = core::convert::Infallible;
+pub(crate) type Error = ();
 pub(crate) type Result<T> = core::result::Result<T, Error>;
 
 fn readline<'a>(uart: &mut Uart, prompt: &str, line: &'a mut [u8]) -> Result<&'a [u8]> {

@@ -489,10 +489,11 @@ where
 }
 
 /// Creates paging structures corresponding to the given ranges
-/// of addresses in the current address space.  Note this merely
-/// creates the structures but they do not point to active pages
-/// after it completes.  It is assumed that the allocator
-/// returns zeroed pages.
+/// of addresses in the current address space.
+///
+/// Note this merely creates the structures but they do not point
+/// to active pages after it completes.  It is assumed that the
+/// allocator returns zeroed pages.
 pub fn make_ranges<F>(ranges: &[Range<V4KA>], allocator: &mut F) -> Result<()>
 where
     F: FnMut() -> Result<PF4K>,
@@ -505,8 +506,9 @@ where
 
 /// Creates paging structures corresponding to the given
 /// ranges of addresses in both the current and side-loaded
-/// address spaces, pointing to empty pages.  It is assumed
-/// that the allocator returns zeroed pages.
+/// address spaces, pointing to empty pages.
+///
+/// It is assumed that the allocator returns zeroed pages.
 pub fn make_shared_ranges<A>(ranges: &[Range<V4KA>], side: PF4K, allocator: &mut A) -> Result<PF4K>
 where
     A: FnMut() -> Result<PF4K>,
