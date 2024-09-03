@@ -524,6 +524,6 @@ mod global {
         static mut ALLOC: QuickFit = QuickFit::new(BumpAlloc::new(unsafe {
             Block::new_from_raw_parts(ptr::addr_of_mut!(HEAP).cast(), mem::size_of::<GlobalHeap>())
         }));
-        unsafe { ptr::addr_of_mut!(ALLOC) }
+        ptr::addr_of_mut!(ALLOC)
     }));
 }

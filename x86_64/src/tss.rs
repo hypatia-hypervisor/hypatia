@@ -15,11 +15,12 @@ use crate::{HyperStack, StackIndex, CPL};
 use bit_field::BitField;
 
 /// Struct TSS represents the 64-bit task state structure,
-/// as described in SDM Ch. 7.  Note that, instead of using
-/// a packed data structure and u64 for things that are
-/// actually 64-bit quantities, we use the 32-bit half
-/// words and the C ABI to guarantee alignment and placement
-/// in the structure.
+/// as described in SDM Ch. 7.
+///
+/// Note that, instead of using a packed data structure and
+/// u64 for things that are actually 64-bit quantities, we
+/// use the 32-bit half words and the C ABI to guarantee
+/// alignment and placement in the structure.
 
 #[repr(C)]
 pub struct TSS {

@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT.
 
 #![feature(allocator_api)]
-#![feature(const_mut_refs)]
 #![feature(exposed_provenance)]
 #![feature(naked_functions)]
 #![feature(ptr_sub_ptr)]
