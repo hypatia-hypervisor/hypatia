@@ -6,10 +6,6 @@
 // https://opensource.org/licenses/MIT.
 
 #![feature(allocator_api)]
-#![feature(exposed_provenance)]
-#![feature(naked_functions)]
-#![feature(ptr_sub_ptr)]
-#![feature(strict_provenance)]
 #![feature(sync_unsafe_cell)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(not(test), no_std)]
@@ -87,7 +83,7 @@ use core::ops::Range;
 
 use crate::x86_64::memory::{Region, Type};
 use crate::x86_64::mp;
-use arch::{VPageAddr, HPA, MIB, PF4K, V4KA};
+use arch::{HPA, MIB, PF4K, V4KA, VPageAddr};
 
 type Result<T> = core::result::Result<T, &'static str>;
 
@@ -138,7 +134,7 @@ const BINARY_LOAD_REGION_END: HPA = load_addr(BINARY_TABLE.len());
 /// regions that make up both the binary archive
 /// as well as our load regions are mapped within
 /// this region, so we can address them via pointers.
-#[cfg_attr(not(test), no_mangle)]
+#[cfg_attr(not(test), unsafe(no_mangle))]
 pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     arch::lapic::enable_x2apic();
     let multiboot = x86_64::platform::init::start(mbinfo_phys);
@@ -216,7 +212,7 @@ fn theon_fits(regions: &[Region]) -> bool {
 fn clear_binary_load_region() {
     let start = theon::vaddr(BINARY_LOAD_REGION_START);
     let end = theon::vaddr(BINARY_LOAD_REGION_END);
-    unsafe { core::ptr::write_bytes(start.cast_mut(), 0, end.sub_ptr(start)) };
+    unsafe { core::ptr::write_bytes(start.cast_mut(), 0, end.offset_from_unsigned(start)) };
 }
 
 /// Loads the named binary of the given type into given physical region.
@@ -244,7 +240,7 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
         headers.push(header);
     }
     let base = theon::vaddr(region.start).cast_mut();
-    let len = unsafe { theon::vaddr(region.end).sub_ptr(theon::vaddr(region.start)) };
+    let len = unsafe { theon::vaddr(region.end).offset_from_unsigned(theon::vaddr(region.start)) };
     let heap = unsafe { allocator::Block::new_from_raw_parts(base, len) };
     let bump = allocator::BumpAlloc::new(heap);
     let allocate = || {
@@ -290,7 +286,7 @@ fn load(name: &str, typ: BinaryType, bytes: &[u8], region: Range<HPA>) -> Result
 }
 
 #[cfg_attr(test, allow(dead_code))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn apmain(cpu: arch::ProcessorID) -> ! {
     use core::sync::atomic::{AtomicBool, Ordering};
     static S: AtomicBool = AtomicBool::new(false);

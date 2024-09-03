@@ -45,9 +45,7 @@
 
 #![feature(assert_matches)]
 #![feature(fn_align)]
-#![feature(naked_functions)]
 #![feature(step_trait)]
-#![feature(strict_provenance)]
 #![cfg_attr(not(test), no_std)]
 #![forbid(absolute_paths_not_starting_with_crate)]
 #![forbid(elided_lifetimes_in_paths)]
@@ -56,7 +54,7 @@
 use core::convert::TryFrom;
 use core::fmt::Debug;
 use core::iter::Step;
-use zerocopy::{FromBytes, FromZeroes};
+use zerocopy::FromBytes;
 
 pub mod cpu;
 pub(crate) mod debug;
@@ -122,7 +120,7 @@ pub trait Page {
     }
 }
 
-#[derive(FromBytes, FromZeroes)]
+#[derive(FromBytes)]
 #[repr(C, align(4096))]
 pub struct Page4K([u8; 4 * KIB]);
 
@@ -286,9 +284,10 @@ impl VPageAddr for V4KA {
 }
 
 impl Step for V4KA {
-    fn steps_between(start: &V4KA, end: &V4KA) -> Option<usize> {
-        let diff = end.0.checked_sub(start.0)?;
-        Some(diff / Page4K::SIZE)
+    fn steps_between(start: &V4KA, end: &V4KA) -> (usize, Option<usize>) {
+        let start = start.0 / Page4K::SIZE;
+        let end = end.0 / Page4K::SIZE;
+        usize::steps_between(&start, &end)
     }
 
     fn forward_checked(start: Self, count: usize) -> Option<Self> {
@@ -312,16 +311,16 @@ mod v4ka_tests {
     fn steps_between_works() {
         let start = V4KA::new(0);
         let end = V4KA::new(0);
-        assert_eq!(V4KA::steps_between(&start, &end), Some(0));
+        assert_eq!(V4KA::steps_between(&start, &end), (0, Some(0)));
 
         let end = V4KA::new_round_up(1);
         assert_eq!(end.addr(), 4096);
-        assert_eq!(V4KA::steps_between(&start, &end), Some(1));
+        assert_eq!(V4KA::steps_between(&start, &end), (1, Some(1)));
 
         let end = V4KA::new(16 * KIB);
-        assert_eq!(V4KA::steps_between(&start, &end), Some(4));
+        assert_eq!(V4KA::steps_between(&start, &end), (4, Some(4)));
 
-        assert_eq!(V4KA::steps_between(&end, &start), None);
+        assert_eq!(V4KA::steps_between(&end, &start), (0, None));
     }
 }
 
@@ -344,9 +343,10 @@ impl VPageAddr for V2MA {
 }
 
 impl Step for V2MA {
-    fn steps_between(start: &V2MA, end: &V2MA) -> Option<usize> {
-        let diff = end.0.checked_sub(start.0)?;
-        Some(diff / Page2M::SIZE)
+    fn steps_between(start: &V2MA, end: &V2MA) -> (usize, Option<usize>) {
+        let start = start.0 / Page2M::SIZE;
+        let end = end.0 / Page2M::SIZE;
+        usize::steps_between(&start, &end)
     }
 
     fn forward_checked(start: Self, count: usize) -> Option<Self> {
@@ -381,9 +381,10 @@ impl VPageAddr for V1GA {
 }
 
 impl Step for V1GA {
-    fn steps_between(start: &V1GA, end: &V1GA) -> Option<usize> {
-        let diff = end.0.checked_sub(start.0)?;
-        Some(diff / Page1G::SIZE)
+    fn steps_between(start: &V1GA, end: &V1GA) -> (usize, Option<usize>) {
+        let start = start.0 / Page1G::SIZE;
+        let end = end.0 / Page1G::SIZE;
+        usize::steps_between(&start, &end)
     }
 
     fn forward_checked(start: Self, count: usize) -> Option<Self> {
@@ -418,9 +419,10 @@ impl VPageAddr for V512GA {
 }
 
 impl Step for V512GA {
-    fn steps_between(start: &V512GA, end: &V512GA) -> Option<usize> {
-        let diff = end.0.checked_sub(start.0)?;
-        Some(diff / Page512G::SIZE)
+    fn steps_between(start: &V512GA, end: &V512GA) -> (usize, Option<usize>) {
+        let start = start.0 / Page512G::SIZE;
+        let end = end.0 / Page512G::SIZE;
+        usize::steps_between(&start, &end)
     }
 
     fn forward_checked(start: Self, count: usize) -> Option<Self> {
