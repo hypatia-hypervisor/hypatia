@@ -522,8 +522,8 @@ mod global {
     static GLOBAL_ALLOCATOR: GlobalQuickAlloc = GlobalQuickAlloc(AtomicPtr::new({
         static mut HEAP: GlobalHeap = GlobalHeap::new();
         static mut ALLOC: QuickFit = QuickFit::new(BumpAlloc::new(unsafe {
-            Block::new_from_raw_parts(ptr::addr_of_mut!(HEAP).cast(), mem::size_of::<GlobalHeap>())
+            Block::new_from_raw_parts((&raw mut HEAP).cast(), mem::size_of::<GlobalHeap>())
         }));
-        ptr::addr_of_mut!(ALLOC)
+        &raw mut ALLOC
     }));
 }
