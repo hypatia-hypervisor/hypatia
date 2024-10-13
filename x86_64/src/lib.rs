@@ -56,7 +56,7 @@
 use core::convert::TryFrom;
 use core::fmt::Debug;
 use core::iter::Step;
-use zerocopy::{FromBytes};
+use zerocopy::FromBytes;
 
 pub mod cpu;
 pub(crate) mod debug;
