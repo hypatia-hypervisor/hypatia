@@ -1,4 +1,4 @@
-use core::arch::asm;
+use core::arch::naked_asm;
 use seq_macro::seq;
 
 #[derive(Copy, Clone, Debug)]
@@ -105,13 +105,13 @@ pub fn stubs() -> &'static [Stub; 256] {
 #[link_section = ".trap"]
 #[naked]
 #[repr(align(4096))]
-pub unsafe extern "C" fn trap_stubs() -> ! {
+pub unsafe extern "C" fn trap_stubs() {
     unsafe {
-        asm!(
+        naked_asm!(
             seq!(N in 0..=255 {
                 concat!( #( gen_trap_stub!(N), )* )
             }),
-            trap = sym trap, options(att_syntax, noreturn));
+            trap = sym trap, options(att_syntax));
     }
 }
 
@@ -120,9 +120,9 @@ pub unsafe extern "C" fn trap_stubs() -> ! {
 /// Common trap handler.  Called from interrupt/exception stub.
 #[link_section = ".trap"]
 #[naked]
-pub unsafe extern "C" fn trap() -> ! {
+pub unsafe extern "C" fn trap() {
     unsafe {
-        asm!(r#"
+        naked_asm!(r#"
             // Allocate space to save registers.
             subq $((4 + 15) * 8), %rsp
             // Save the general purpose registers.
@@ -220,7 +220,7 @@ pub unsafe extern "C" fn trap() -> ! {
             cs_offset = const TRAPFRAME_CS_OFFSET,
             vector_offset = const TRAPFRAME_VECTOR_OFFSET,
             dispatch = sym dispatch,
-            options(att_syntax, noreturn));
+            options(att_syntax));
     }
 }
 
