@@ -17,5 +17,6 @@ bitflags = "*"
 bit_field = "*"
 bitstruct = "*"
 seq-macro = "*"
+static_assertions = "*"
 x86 = "*"
 zerocopy = { version = "*", features = [ "derive" ] }

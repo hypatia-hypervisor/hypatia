@@ -9,10 +9,8 @@
 
 ENTRY(init)
 
-EXTERN(xferv);
-
 SECTIONS {
-	. = 0xFFFFFC0000000000;
+	. = 0xFFFFFB4000000000;
 
 	.xferv . :
 	{
@@ -53,5 +51,6 @@ SECTIONS {
 		*(COMMON)
 	}
 	. = ALIGN(4096);
+
 	PROVIDE(end = .);
 }
