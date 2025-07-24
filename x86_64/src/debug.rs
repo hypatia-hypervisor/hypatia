@@ -8,7 +8,9 @@
 //
 // Minimal println for debugging directly in the arch crate.
 //
+#[allow(dead_code)]
 pub struct Uart {}
+
 impl core::fmt::Write for Uart {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         fn putb(b: u8) {

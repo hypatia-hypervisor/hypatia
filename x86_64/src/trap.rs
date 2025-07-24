@@ -104,7 +104,7 @@ pub fn stubs() -> &'static [Stub; 256] {
 #[allow(dead_code)]
 #[unsafe(link_section = ".trap")]
 #[unsafe(naked)]
-#[repr(align(4096))]
+#[rustc_align(4096)]
 pub unsafe extern "C" fn trap_stubs() -> ! {
     naked_asm!(
         seq!(N in 0..=255 {
