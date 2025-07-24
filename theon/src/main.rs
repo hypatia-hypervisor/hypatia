@@ -41,10 +41,10 @@
 //! execution.  Theon will locate them, and load them into
 //! physical memory.
 //!
-//! Each binary is allocated a 16MiB region of physical RAM for
-//! its various pages; these regions begin at 64MiB and are
-//! aligned on 32MiB boundaries, giving us room for loading new
-//! images into the second 16MiBs of each binary's region for
+//! Each binary is allocated an 8MiB region of physical RAM for
+//! its various pages; these regions begin at 16MiB and are
+//! aligned on 16MiB boundaries, giving us room for loading new
+//! images into the second 8MiBs of each binary's region for
 //! hitless update.
 //!
 //! Binaries represent either tasks or segments; see HDP 0002
@@ -100,13 +100,13 @@ enum BinaryType {
 /// or a task).
 type BinaryMeta = (&'static str, HPA, BinaryType);
 
-/// Binaries are loaded in 16MiB regions of physical memory
-/// that are aligned on 32MiB boundaries, starting at 64MiB.
+/// Binaries are loaded in 8MiB regions of physical memory
+/// that are aligned on 16MiB boundaries, starting at 64MiB.
 const fn load_addr(offset: usize) -> HPA {
-    let addr = (64 + offset * 32) * MIB;
+    let addr = (64 + offset * 16) * MIB;
     HPA::new(addr as u64)
 }
-const BINARY_IMAGE_MEMORY_SIZE: usize = 16 * MIB;
+const BINARY_IMAGE_MEMORY_SIZE: usize = 8 * MIB;
 
 /// A table description all the binaries that are loaded by
 /// theon, where to load them in physical memory, and their
@@ -116,12 +116,13 @@ const BINARY_TABLE: &[BinaryMeta] = &[
     ("global", load_addr(1), BinaryType::Segment),
     ("memory", load_addr(2), BinaryType::Segment),
     ("monitor", load_addr(3), BinaryType::Segment),
-    ("scheduler", load_addr(4), BinaryType::Segment),
-    ("supervisor", load_addr(5), BinaryType::Segment),
-    ("trace", load_addr(6), BinaryType::Segment),
-    ("system", load_addr(7), BinaryType::Task),
-    ("vcpu", load_addr(8), BinaryType::Task),
-    ("vm", load_addr(9), BinaryType::Task),
+    ("node", load_addr(4), BinaryType::Segment),
+    ("scheduler", load_addr(5), BinaryType::Segment),
+    ("supervisor", load_addr(6), BinaryType::Segment),
+    ("trace", load_addr(7), BinaryType::Segment),
+    ("system", load_addr(8), BinaryType::Task),
+    ("vcpu", load_addr(9), BinaryType::Task),
+    ("vm", load_addr(10), BinaryType::Task),
 ];
 const BINARY_LOAD_REGION_START: HPA = load_addr(0);
 const BINARY_LOAD_REGION_END: HPA = load_addr(BINARY_TABLE.len());
@@ -153,10 +154,12 @@ pub extern "C" fn main(mbinfo_phys: u64) -> ! {
     let archive = goblin::archive::Archive::parse(bins.bytes).expect("cannot parse bin.a");
     uart::panic_println!("Binary archive: {:#x?}", archive);
     clear_binary_load_region();
+    let mut roots = alloc::vec::Vec::with_capacity(BINARY_TABLE.len());
     for &(name, addr, typ) in BINARY_TABLE {
         let bytes = archive.extract(name, bins.bytes).expect("cannot extract elf");
         let region_end = addr.offset(BINARY_IMAGE_MEMORY_SIZE);
-        load(name, typ, bytes, addr..region_end).expect("loaded binary");
+        let root = load(name, typ, bytes, addr..region_end).expect("loaded binary");
+        roots.push((name, root));
     }
     unsafe { core::arch::asm!("int3") };
     // Start other CPUs.
