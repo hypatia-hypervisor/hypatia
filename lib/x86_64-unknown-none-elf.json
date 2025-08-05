@@ -5,7 +5,7 @@
 	"linker": "rust-lld",
 	"target-endian": "little",
 	"target-pointer-width": "64",
-	"target-c-int-width": "32",
+	"target-c-int-width": 32,
 	"arch": "x86_64",
 	"os": "none",
 	"executables": true,
