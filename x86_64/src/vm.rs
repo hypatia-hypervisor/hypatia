@@ -242,6 +242,14 @@ trait Level {
         let entry = unsafe { Self::side_pte_ref(va) };
         entry.assign(pte);
     }
+
+    /// # Safety
+    ///
+    /// This is note safe.  It rquires that some address space is side-loaded
+    /// before calling.
+    unsafe fn make_side_level<A>(va: V4KA, allocator: &mut A) -> Result<()>
+    where
+        A: FnMut() -> Result<PF4K>;
 }
 
 enum Level4 {}
@@ -265,6 +273,18 @@ impl Level for Level4 {
     fn decode(pte: PTE) -> Option<Self::EntryType> {
         if pte.is_present() { Some(L4E::Next(pte)) } else { None }
     }
+
+    unsafe fn make_side_level<A>(va: V4KA, allocator: &mut A) -> Result<()>
+    where
+        A: FnMut() -> Result<PF4K>,
+    {
+        unsafe {
+            if Level4::side_entry(va.addr()).is_none() {
+                Level4::set_side_entry(va.addr(), alloc_inner(allocator)?);
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Level for Level3 {
@@ -282,6 +302,19 @@ impl Level for Level3 {
         } else {
             Some(L3E::Next(pte))
         }
+    }
+
+    unsafe fn make_side_level<A>(va: V4KA, allocator: &mut A) -> Result<()>
+    where
+        A: FnMut() -> Result<PF4K>,
+    {
+        unsafe {
+            Level4::make_side_level(va, allocator)?;
+            if Level3::side_entry(va.addr()).is_none() {
+                Level3::set_side_entry(va.addr(), alloc_inner(allocator)?);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -301,6 +334,19 @@ impl Level for Level2 {
             Some(L2E::Next(pte))
         }
     }
+
+    unsafe fn make_side_level<A>(va: V4KA, allocator: &mut A) -> Result<()>
+    where
+        A: FnMut() -> Result<PF4K>,
+    {
+        unsafe {
+            Level3::make_side_level(va, allocator)?;
+            if Level2::side_entry(va.addr()).is_none() {
+                Level2::set_side_entry(va.addr(), alloc_inner(allocator)?);
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Level for Level1 {
@@ -312,6 +358,19 @@ impl Level for Level1 {
 
     fn decode(pte: PTE) -> Option<Self::EntryType> {
         if !pte.is_present() { None } else { Some(L1E::Page(PF4K(pte.pfa()))) }
+    }
+
+    unsafe fn make_side_level<A>(va: V4KA, allocator: &mut A) -> Result<()>
+    where
+        A: FnMut() -> Result<PF4K>,
+    {
+        unsafe {
+            Level2::make_side_level(va, allocator)?;
+            if Level1::side_entry(va.addr()).is_none() {
+                Level1::set_side_entry(va.addr(), alloc_inner(allocator)?);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -326,7 +385,7 @@ impl PageTable {
     }
 
     pub fn root_addr(&self) -> HPA {
-        translate_ptr(self)
+        translate_ptr(self).expect("mapped object is mapped")
     }
 
     pub const fn proto_ptr() -> *const PageTable {
@@ -371,22 +430,26 @@ fn walk(va: usize) -> Walk {
 
 /// Translates the virtual address of the given pointer in the current
 /// address space to a host physical address.
-pub fn translate_ptr<T>(p: *const T) -> HPA {
+pub fn translate_ptr<T>(p: *const T) -> Option<HPA> {
     translate(p.addr())
 }
 
-pub fn translate(va: usize) -> HPA {
-    match walk(va) {
+pub fn translate(va: usize) -> Option<HPA> {
+    translate_walk(va, walk(va))
+}
+
+fn translate_walk(va: usize, w: Walk) -> Option<HPA> {
+    match w {
         Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Next(_)), Some(L1E::Page(PF4K(hpa)))) => {
-            hpa.offset(va & <PF4K as PageFrame>::PageType::MASK)
+            Some(hpa.offset(va & <PF4K as PageFrame>::PageType::MASK))
         }
         Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Page(PF2M(hpa))), _) => {
-            hpa.offset(va & <PF2M as PageFrame>::PageType::MASK)
+            Some(hpa.offset(va & <PF2M as PageFrame>::PageType::MASK))
         }
         Walk(Some(_), Some(L3E::Page(PF1G(hpa))), _, _) => {
-            hpa.offset(va & <PF1G as PageFrame>::PageType::MASK)
+            Some(hpa.offset(va & <PF1G as PageFrame>::PageType::MASK))
         }
-        Walk(_, _, _, _) => HPA::new(0),
+        Walk(_, _, _, _) => None,
     }
 }
 
@@ -398,20 +461,16 @@ where
 {
     let va = va.addr();
     assert!(va < Level1::SIDE_BASE_ADDRESS, "attempting to map in the recursive region");
-    let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
 
     let w = walk(va);
     if let Walk(None, _, _, _) = w {
-        let pml4e = allocator()?;
-        Level4::set_entry(va, PTE::new(pml4e.pfa(), inner_flags));
+        Level4::set_entry(va, alloc_inner(allocator)?);
     }
     if let Walk(_, None, _, _) = w {
-        let pml3e = allocator()?;
-        Level3::set_entry(va, PTE::new(pml3e.pfa(), inner_flags));
+        Level3::set_entry(va, alloc_inner(allocator)?);
     }
     if let Walk(_, _, None, _) = w {
-        let pml2e = allocator()?;
-        Level2::set_entry(va, PTE::new(pml2e.pfa(), inner_flags));
+        Level2::set_entry(va, alloc_inner(allocator)?);
     }
     if let Walk(_, _, _, None) = w {
         Level1::set_entry(va, PTE::new(hpf.pfa(), flags));
@@ -421,6 +480,9 @@ where
     }
 }
 
+/// Maps a leaf node into the address space.  Requires that the
+/// intermediate paging structures for the mapping already
+/// exist.
 pub fn map_leaf(hpf: PF4K, va: V4KA, r: bool, w: bool, x: bool) -> Result<()> {
     let flags = page_perm_flags(r, w, x);
     let mut allocator = || Err("not a leaf");
@@ -449,6 +511,17 @@ fn page_perm_flags(r: bool, w: bool, x: bool) -> PTEFlags {
         flags.insert(PTEFlags::NX);
     }
     flags
+}
+
+// Allocate an "inner" node in the radix tree; that is, make a
+// new interior node that is, itself, a page table.
+fn alloc_inner<A>(allocator: &mut A) -> Result<PTE>
+where
+    A: FnMut() -> Result<PF4K>,
+{
+    let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
+    let p = allocator()?;
+    Ok(PTE::new(p.pfa(), inner_flags))
 }
 
 // Makes the paging structures at a given level for the
@@ -526,14 +599,62 @@ where
         }
         Ok(())
     }
-    let _tlb = TLBFlushGuard::new();
     unsafe {
         side_load(side)?;
     }
     make_shared_ranges_level4::<_>(ranges, allocator)?;
     make_ranges_level::<Level3, _>(ranges, allocator)?;
     make_ranges_level::<Level2, _>(ranges, allocator)?;
-    unsafe { unload_side() }
+    unload_side()
+}
+
+/// Shares some subtree of an address space into a side-loaded
+/// space.
+pub fn share_range<A>(range: Range<V4KA>, side: PF4K, allocator: &mut A) -> Result<PF4K>
+where
+    A: FnMut() -> Result<PF4K>,
+{
+    const SIZE_512G: usize = <V512GA as VPageAddr>::PageType::SIZE;
+    const SIZE_1G: usize = <V1GA as VPageAddr>::PageType::SIZE;
+    const SIZE_2M: usize = <V2MA as VPageAddr>::PageType::SIZE;
+    const SIZE_4K: usize = <V4KA as VPageAddr>::PageType::SIZE;
+
+    let mut va = range.start.addr();
+    let end = range.end.addr();
+    assert!(end <= Level1::SIDE_BASE_ADDRESS, "attempting to map in the recursive region");
+    unsafe {
+        side_load(side)?;
+    }
+    while va != end {
+        let len = if end.wrapping_sub(va) >= SIZE_512G && va % SIZE_512G == 0 {
+            unsafe {
+                Level4::set_side_entry(va, Level4::pte_ref(va).clone());
+            }
+            SIZE_512G
+        } else if end.wrapping_sub(va) >= SIZE_1G && va % SIZE_1G == 0 {
+            unsafe {
+                Level4::make_side_level(V4KA::new(va), allocator)?;
+                Level3::set_side_entry(va, Level3::pte_ref(va).clone());
+            }
+            SIZE_1G
+        } else if end.wrapping_sub(va) >= SIZE_2M && va % SIZE_2M == 0 {
+            unsafe {
+                Level3::make_side_level(V4KA::new(va), allocator)?;
+                Level2::set_side_entry(va, Level2::pte_ref(va).clone());
+            }
+            SIZE_2M
+        } else if end.wrapping_sub(va) >= SIZE_4K && va % SIZE_4K == 0 {
+            unsafe {
+                Level2::make_side_level(V4KA::new(va), allocator)?;
+                Level1::set_side_entry(va, Level1::pte_ref(va).clone());
+            }
+            SIZE_4K
+        } else {
+            panic!("impossible page size");
+        };
+        va += len;
+    }
+    unload_side()
 }
 
 /// unmaps a region by clearing its root level PTEs.  Only
@@ -545,6 +666,24 @@ pub fn unmap_root_ranges(ranges: &[Range<V4KA>]) {
         let end = V512GA::new_round_up(range.end.addr());
         for addr in start..end {
             let entry = Level4::pte_ref(addr.addr());
+            entry.clear();
+        }
+    }
+}
+
+/// unmaps a side region by clearing its root level PTEs.  Only
+/// useful for segments and tasks.
+///
+/// # Safety
+/// This is not safe.  The side-loaded address space may not
+/// be loaded.
+pub unsafe fn unmap_side_root_ranges(ranges: &[Range<V4KA>]) {
+    let _tlb = TLBFlushGuard::new();
+    for range in ranges {
+        let start = V512GA::new_round_down(range.start.addr());
+        let end = V512GA::new_round_up(range.end.addr());
+        for addr in start..end {
+            let entry = unsafe { Level4::side_pte_ref(addr.addr()) };
             entry.clear();
         }
     }
@@ -568,8 +707,8 @@ pub unsafe fn side_load(pf: PF4K) -> Result<()> {
 /// # Safety
 ///
 /// This is not safe.  The side-loaded address space may not
-/// loaded.
-pub unsafe fn unload_side() -> Result<PF4K> {
+/// be loaded.
+pub fn unload_side() -> Result<PF4K> {
     let _tlb = TLBFlushGuard::new();
     let table = unsafe { &mut *PageTable::proto_ptr().with_addr(Level4::BASE_ADDRESS).cast_mut() };
     let entry = table.entries[Level4::SIDE_INDEX].pfa();
@@ -630,19 +769,8 @@ unsafe fn side_walk(va: usize) -> Walk {
 ///
 /// XXX(cross): We should figure out some way to at least improve
 /// safety here.
-pub unsafe fn side_translate(va: usize) -> HPA {
-    match unsafe { side_walk(va) } {
-        Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Next(_)), Some(L1E::Page(PF4K(hpa)))) => {
-            hpa.offset(va & <PF4K as PageFrame>::PageType::MASK)
-        }
-        Walk(Some(_), Some(L3E::Next(_)), Some(L2E::Page(PF2M(hpa))), _) => {
-            hpa.offset(va & <PF2M as PageFrame>::PageType::MASK)
-        }
-        Walk(Some(_), Some(L3E::Page(PF1G(hpa))), _, _) => {
-            hpa.offset(va & <PF1G as PageFrame>::PageType::MASK)
-        }
-        Walk(_, _, _, _) => HPA::new(0),
-    }
+pub unsafe fn side_translate(va: usize) -> Option<HPA> {
+    translate_walk(va, unsafe { side_walk(va) })
 }
 
 /// Maps the given PF4K to the given virtual address in the currently
@@ -657,25 +785,20 @@ where
     F: FnMut() -> Result<PF4K>,
 {
     let va = va.addr();
-    let inner_flags = PTEFlags::PRESENT | PTEFlags::WRITE;
-
     let w = unsafe { side_walk(va) };
     if let Walk(None, _, _, _) = w {
-        let pml4e = allocator()?;
         unsafe {
-            Level4::set_side_entry(va, PTE::new(pml4e.pfa(), inner_flags));
+            Level4::set_side_entry(va, alloc_inner(allocator)?);
         }
     }
     if let Walk(_, None, _, _) = w {
-        let pml3e = allocator()?;
         unsafe {
-            Level3::set_side_entry(va, PTE::new(pml3e.pfa(), inner_flags));
+            Level3::set_side_entry(va, alloc_inner(allocator)?);
         }
     }
     if let Walk(_, _, None, _) = w {
-        let pml2e = allocator()?;
         unsafe {
-            Level2::set_side_entry(va, PTE::new(pml2e.pfa(), inner_flags));
+            Level2::set_side_entry(va, alloc_inner(allocator)?);
         }
     }
     if let Walk(_, _, _, None) = w {
