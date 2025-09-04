@@ -205,6 +205,7 @@ fn archive(profile: Profile, locked: Locked) -> Result<()> {
         "global",
         "memory",
         "monitor",
+        "node",
         "scheduler",
         "supervisor",
         "system",

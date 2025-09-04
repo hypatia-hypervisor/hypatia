@@ -115,7 +115,7 @@ pub trait Page {
 
     fn frame(&self) -> Self::FrameType {
         let addr = self.vaddr().addr();
-        let pfa = vm::translate(addr);
+        let pfa = vm::translate(addr).expect("Page is mapped");
         Self::FrameType::new(pfa)
     }
 }
