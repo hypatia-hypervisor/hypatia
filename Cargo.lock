@@ -154,6 +154,7 @@ name = "global"
 version = "0.1.0"
 dependencies = [
  "hypatia",
+ "uart",
  "x86_64",
 ]
 
@@ -216,6 +217,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f87ad3b7b7bcf5da525c22221e3eb3a020cd68b2d55ae62f629c15e8bc3bd56e"
 dependencies = [
  "paste",
+]
+
+[[package]]
+name = "node"
+version = "0.1.0"
+dependencies = [
+ "hypatia",
+ "uart",
+ "x86_64",
 ]
 
 [[package]]
@@ -501,6 +511,7 @@ dependencies = [
  "bitflags 2.9.4",
  "bitstruct",
  "seq-macro",
+ "static_assertions",
  "x86",
  "zerocopy",
 ]
