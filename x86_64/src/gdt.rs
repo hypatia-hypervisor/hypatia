@@ -80,11 +80,14 @@ impl GDT {
         unsafe {
             asm!(r#"
                 subq $16, %rsp;
-                movq {}, 8(%rsp);
-                movw ${}, 6(%rsp);
+                movq {base}, 8(%rsp);
+                movw ${LIMIT}, 6(%rsp);
                 lgdt 6(%rsp);
                 addq $16, %rsp;
-                "#, in(reg) base, const LIMIT, options(att_syntax));
+                "#,
+                base = in(reg) base,
+                LIMIT = const LIMIT,
+                options(att_syntax));
         }
     }
 

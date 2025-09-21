@@ -1,7 +1,7 @@
 use core::arch::naked_asm;
 use seq_macro::seq;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 #[repr(C)]
 pub struct Frame {
     // Pushed by software.

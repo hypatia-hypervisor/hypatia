@@ -18,6 +18,7 @@ use bitstruct::bitstruct;
 bitstruct! {
     /// The Descriptor refers to a segment descriptor.
     #[derive(Clone, Copy, Debug)]
+    #[repr(transparent)]
     pub struct Descriptor(u64) {
         reserved0: u32 = 0..32;
         reserved1: u8 = 32..40;
@@ -75,6 +76,7 @@ bitstruct! {
     /// information for the hardware to locate the TSS in memory.  The
     /// TSS, in turn, mostly holds stack pointers.
     #[derive(Clone, Copy, Debug)]
+    #[repr(transparent)]
     pub struct TaskStateDescriptor(u128) {
         pub limit0: u16 = 0..16;
         pub base0: u16 = 16..32;
@@ -119,6 +121,7 @@ impl TaskStateDescriptor {
 bitstruct! {
     /// Interrupt gate descriptors are entries in the IDT.
     #[derive(Clone, Copy, Default)]
+    #[repr(transparent)]
     pub struct InterruptGateDescriptor(u128) {
         pub offset0: u16 = 0..16;
         pub segment_selector: u16 = 16..32;
