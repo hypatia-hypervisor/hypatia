@@ -33,10 +33,10 @@
 //!
 //! Ref: ACPI v6.4 sec 5.2.5.3
 
-use super::{checksum, Header};
-use crate::theon;
+use super::{Header, checksum};
 use crate::Result;
 use crate::Vec;
+use crate::theon;
 
 use core::mem;
 use core::ptr;

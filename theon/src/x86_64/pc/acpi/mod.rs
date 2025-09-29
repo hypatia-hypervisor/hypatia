@@ -5,8 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-use crate::theon;
 use crate::Result;
+use crate::theon;
 
 use arch::HPA;
 use core::{mem, ptr, slice};
