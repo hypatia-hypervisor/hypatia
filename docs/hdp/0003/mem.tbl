@@ -4,113 +4,77 @@
 tab(,);
 | l | l | l.
 _,_,
-511, Recursive Page Table,
-,, -512 GiB
+511, Recursive Page Table
+,, 0xFFFF_FF80_0000_0000 = -(512 GiB)
 _,_,
 510, Nested Page Table,
-,, -1 TiB
+,, 0xFFFF_FF00_0000_0000 = -(1 TiB)
 _,_,
 509, Device Page Table,
-,, -1 TiB - 512 GiB
+,, 0xFFFF_FE80_0000_0000 = -(1 TiB + 512 GiB)
 _,_,
-508, Sideload Recursive Page Table,
-,, -2 TiB
+508, Mapping Region,
+,, 0xFFFF_FE00_0000_0000 = -(2 TiB)
 _,_,
-507, Sideload Nested Page Table,
-,, -2 TiB - 512 GiB
+507, Sideload Recursive Page Table,
+,, 0xFFFF_FD80_0000_0000 = -(2 TiB + 512 GiB)
 _,_,
-506, Sideload Device Page Table,
-,, -3 TiB
+506, Sideload Nested Page Table,
+,, 0xFFFF_FD00_0000_0000 = -(3 TiB)
 _,_,
-505, (Reserved),
-,, -4 TiB + 512 GiB
+505, Sideload Device Page Table,
+,, 0xFFFF_FC80_0000_0000 = -(3 TiB + 512 GiB)
 _,_,
-504, Global Area,
-,, -4 TiB
+504, Sideload Mapping Region,
+,, 0xFFFF_FC00_0000_0000 = -(4 TiB)
 _,_,
-503, (Reserved),
-,, -5 TiB + 512 GiB
+503, Global Area,
+,, 0xFFFF_FB80_0000_0000 = -(4 TiB + 512 GiB)
 _,_,
-502, Node Area, -5 TiB + 256 GiB
-, Per-CPU Area, -5 TiB
+502, Node Area, 0xFFFF_FB40_0000_0000 = -(5 TiB + 256 GiB)
+, Per-CPU Area, 0xFFFF_FB00_0000_0000 = -(5 TiB)
 _,_,
-501, (Reserved),
-,, -6 TiB + 512 GiB
+501, Monitor,
+,, 0xFFFF_FA80_0000_0000 = -(5 TiB + 512 GiB)
 _,_,
-500, Monitor,
-,, -6 GiB
+500, Trace Area,
+,, 0xFFFF_FA00_0000_0000 = -(6 TiB)
 _,_,
-499,(Reserved),
-,, -7 GiB + 512 GiB
+499, System Upgrade Area,
+,, 0xFFFF_F980_0000_0000 = -(6 GiB + 512 GiB)
 _,_,
-498, Trace Area,
-,, -7 TiB
+498, Supervisor,
+,, 0xFFFF_F900_0000_0000 = -(7 TiB)
 _,_,
-497, (Reserved),
-,, -8 GiB + 512 GiB
+497, Memory Manager,
+,, 0xFFFF_F880_0000_0000 = -(7 GiB + 512 GiB)
 _,_,
-496, System Upgrade Area,
-,, -8 TiB
+496, Device Manager,
+,, 0xFFFF_F800_0000_0000 = -(8 TiB)
 _,_,
-495, (Reserved),
-,, -9 GiB + 512 GiB
-_,_,
-494, Supervisor,
-,, -9 TiB
-_,_,
-493, (Reserved),
-,, -10 TiB + 512 GiB
-_,_,
-492, Memory Manager,
-,, -10 TiB
-_,_,
-491, (Reserved),
-,, -11 TiB + 512 GiB
-_,_,
-490, Device Manager,
-,, -11 TiB
-_,_,
-489, (Reserved),
-,, -12 TiB + 512 GiB
-_,_,
-488, Scheduler,
-,, -12 TiB
-_,_,
-487, (Reserved),
-,, -13 TiB + 512 GiB
-_,_,
-486, Task Set Upgrade Area,
-,, -13 TiB
-_,_,
-485, (Reserved),
-,, -14 TiB + 512 GiB
-_,_,
-484, Task Set Area,
-,, -14 TiB
-_,_,
-483, (Reserved),
-,, -15 TiB + 512 GiB
-_,_,
-482, Task Upgrade Area,
-,, -15 TiB
-_,_,
-481, (Reserved),
-,, -16 TiB + 512 GiB
-_,_,
-480, Task,
-,, -16 TiB
+495, Scheduler,
+,, 0xFFFF_F780_0000_0000 = -(8 GiB + 512 GiB)
 _,_,
 .T&
 l c.
-,\.
-,\.
-,(Reserved)
-,\.
-,\.
+,\.,
+,\.,
+,(Reserved),
+,\.,
+,\.,
 .T&
 | l | l | l.
 _,_,
-448, Temporary Mapping Region,,
-,, -32 TiB
+483, Task Set Upgrade Area,
+,, 0xFFFF_F180_0000_0000 = -(14 TiB + 512 GiB)
+_,_,
+482, Task Set Area,
+,, 0xFFFF_F100_0000_0000 = -(15 TiB)
+_,_,
+481, Task Upgrade Area,
+,, 0xFFFF_F080_0000_0000 = -(15 TiB + 512 GiB)
+_,_,
+480, Task,
+,, 0xFFFF_F000_0000_0000 = -(16 TiB)
 _,_,
 .TE
