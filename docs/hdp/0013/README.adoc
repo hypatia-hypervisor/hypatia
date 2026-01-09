@@ -1,8 +1,25 @@
 :state: Needed
-:date: 2021-05-07
+:date: 2026-01-09
 :labels: design
 
 Hypatia vcpu tasks
 ==================
 
-Describes the vcpu task specifically
+The `vcpu` task implements, and provides the execution context
+for, the bulk of guest CPU virtualization.  There is one
+`vcpu` task for each virtual CPU in a virtual machine.
+
+While conceptually the guest's "virtual CPU" is a hardware
+device, it is primarily interesting when running instructions
+in the guest context; in this way, we may think of it as a
+thread of execution, hence why it is implemented as a task.
+
+A `vcpu` task is allocated and initialized when a virtual
+machine is created; initialization parameters include the
+virtual CPU ID (e.g., x86 LAPID ID), and a side-loadable
+reference to the task set leader's virtual address address
+space.  Using the latter, the `vcpu` can locate the task
+set area, where it will find the set of specific data it is
+parameterized with, based on its unique ID number.  E.g.,
+on x86, `CPUID` leaf data and the `vcpu`'s posted interrupt
+table are in this region, as is a per-`vcpu` mailbox.

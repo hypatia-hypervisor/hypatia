@@ -24,11 +24,15 @@ way that we assert they cannot maliciously (or inadvertently)
 starve the rest of the system for resources.
 
 vcpu::
-A task type that runs a VCPU on behalf a virtual machine.
+A task type that runs a virtual CPU on behalf a virtual machine.
 
 vmctl::
-A virtual machine control task that provides general control
-services on behalf of a virtual machine.
+A virtual machine control task that owns the resources of and
+provides general control services for a virtual machine.
+
+The set of task types is small and fixed, but the set of active
+tasks on a system varies over time as VMs are created and
+destroyed by direction of an external control plane.
 
 Task Sets
 ---------
@@ -40,11 +44,22 @@ task can request creation of a new task set and start a new task
 running in that task set; the first task running in a task set
 is automatically the task set leader.
 
+Task sets share access to a dedicated region of memory that we
+call the _task set area_.  This allows tasks within a task set
+to communicate with one another using shared memory.  Tasks may
+post messages to one another using a mailbox mechanism, with the
+mailboxes stored in the task set area.  Tasks signal a pending
+message for one anther by setting a "doorbell" bit on the
+per-task mailbox structure; this bit is checked periodically
+by tasks themselves.  For urgent requests, a running task may
+be interrupted by means of an inter-processor interrupt (IPI).
+
 Segments
 --------
 A segment is a fixed, shared region of virtual address space
 that can be mapped into a task address space and contains text
-and data that provide services to a task.
+and data that provide services to tasks.  The set of tasks is
+both small and fixed.
 
 Privilege and State Flushing
 ----------------------------
