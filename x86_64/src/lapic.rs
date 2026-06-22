@@ -240,7 +240,7 @@ pub unsafe fn send_sipi(cpu: ProcessorID, vector: u8) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::assert_matches::assert_matches;
+    use core::assert_matches;
 
     #[test]
     fn fixed() {

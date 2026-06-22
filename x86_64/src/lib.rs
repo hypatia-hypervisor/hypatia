@@ -43,7 +43,6 @@
 //! page in some address space.  The page may or may
 //! not be mapped.
 
-#![feature(assert_matches)]
 #![feature(fn_align)]
 #![feature(step_trait)]
 #![cfg_attr(not(test), no_std)]

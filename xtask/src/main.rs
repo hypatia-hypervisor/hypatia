@@ -164,6 +164,7 @@ fn build(profile: Profile, locked: Locked) -> Result<()> {
         "build {profile} {locked} \
             --workspace --exclude xtask \
             -Z build-std=core,alloc \
+            -Z json-target-spec \
             --target lib/{triple}.json",
         profile = profile.as_str(),
         locked = locked.as_str(),

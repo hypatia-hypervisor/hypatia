@@ -626,24 +626,24 @@ where
         side_load(side)?;
     }
     while va != end {
-        let len = if end.wrapping_sub(va) >= SIZE_512G && va % SIZE_512G == 0 {
+        let len = if end.wrapping_sub(va) >= SIZE_512G && va.is_multiple_of(SIZE_512G) {
             unsafe {
                 Level4::set_side_entry(va, Level4::pte_ref(va).clone());
             }
             SIZE_512G
-        } else if end.wrapping_sub(va) >= SIZE_1G && va % SIZE_1G == 0 {
+        } else if end.wrapping_sub(va) >= SIZE_1G && va.is_multiple_of(SIZE_1G) {
             unsafe {
                 Level4::make_side_level(V4KA::new(va), allocator)?;
                 Level3::set_side_entry(va, Level3::pte_ref(va).clone());
             }
             SIZE_1G
-        } else if end.wrapping_sub(va) >= SIZE_2M && va % SIZE_2M == 0 {
+        } else if end.wrapping_sub(va) >= SIZE_2M && va.is_multiple_of(SIZE_2M) {
             unsafe {
                 Level3::make_side_level(V4KA::new(va), allocator)?;
                 Level2::set_side_entry(va, Level2::pte_ref(va).clone());
             }
             SIZE_2M
-        } else if end.wrapping_sub(va) >= SIZE_4K && va % SIZE_4K == 0 {
+        } else if end.wrapping_sub(va) >= SIZE_4K && va.is_multiple_of(SIZE_4K) {
             unsafe {
                 Level2::make_side_level(V4KA::new(va), allocator)?;
                 Level1::set_side_entry(va, Level1::pte_ref(va).clone());

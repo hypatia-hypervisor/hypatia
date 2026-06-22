@@ -95,7 +95,9 @@ macro_rules! gen_trap_stub {
 }
 
 pub fn stubs() -> &'static [Stub; 256] {
-    unsafe { &*(trap_stubs as usize as *const [Stub; 256]) }
+    let ptr = trap_stubs as *const ();
+    let stubs = ptr.addr() as *const [Stub; 256];
+    unsafe { &*stubs }
 }
 
 /// # Safety

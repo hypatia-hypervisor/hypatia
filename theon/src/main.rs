@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT.
 
 #![feature(allocator_api)]
-#![feature(if_let_guard)]
 #![feature(pointer_is_aligned_to)]
 #![feature(sync_unsafe_cell)]
 #![cfg_attr(not(test), no_main)]
@@ -172,7 +171,8 @@ pub extern "C" fn main(mbinfo_phys: u64) -> ! {
         crate::x86_64::platform::acpi::parse(rsdp.unwrap());
         mp::start_aps(cpus());
     }
-    panic!("main: trapstubs = {:#x?}", arch::trap::stubs as usize);
+    let stubs = arch::trap::stubs as *const ();
+    panic!("main: trapstubs = {trapstubs:#x?}", trapstubs = stubs.addr());
 }
 
 // XXX: This is temporary, for testing purposes only.

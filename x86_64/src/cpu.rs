@@ -10,9 +10,7 @@ use core::time;
 /// Hardware hint in tight loops for hyperthreads to
 /// get access to compute.
 pub fn relax() {
-    unsafe {
-        core::arch::x86_64::_mm_pause();
-    }
+    core::arch::x86_64::_mm_pause();
 }
 
 /// Returns the clock frequency of the current CPU in Hertz.
