@@ -289,16 +289,28 @@ impl Step for V4KA {
         usize::steps_between(&start, &end)
     }
 
+    fn forward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let diff = count.wrapping_mul(Page4K::SIZE);
+        let (fwd, overflow) = start.0.overflowing_add(diff);
+        (Self(fwd), overflow)
+    }
+
+    fn backward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let diff = count.wrapping_mul(Page4K::SIZE);
+        let (back, overflow) = start.0.overflowing_sub(diff);
+        (Self(back), overflow)
+    }
+
     fn forward_checked(start: Self, count: usize) -> Option<Self> {
         let diff = count.checked_mul(Page4K::SIZE)?;
         let fwd = start.0.checked_add(diff)?;
-        Some(V4KA(fwd))
+        Some(Self(fwd))
     }
 
     fn backward_checked(start: Self, count: usize) -> Option<Self> {
         let diff = count.checked_mul(Page4K::SIZE)?;
-        let bck = start.0.checked_sub(diff)?;
-        Some(V4KA(bck))
+        let back = start.0.checked_sub(diff)?;
+        Some(Self(back))
     }
 }
 
@@ -348,6 +360,18 @@ impl Step for V2MA {
         usize::steps_between(&start, &end)
     }
 
+    fn forward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let diff = count.wrapping_mul(Page4K::SIZE);
+        let (fwd, overflow) = start.0.overflowing_add(diff);
+        (Self(fwd), overflow)
+    }
+
+    fn backward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let diff = count.wrapping_mul(Page4K::SIZE);
+        let (back, overflow) = start.0.overflowing_sub(diff);
+        (Self(back), overflow)
+    }
+
     fn forward_checked(start: Self, count: usize) -> Option<Self> {
         let diff = count.checked_mul(Page2M::SIZE)?;
         let fwd = start.0.checked_add(diff)?;
@@ -386,6 +410,18 @@ impl Step for V1GA {
         usize::steps_between(&start, &end)
     }
 
+    fn forward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let diff = count.wrapping_mul(Page4K::SIZE);
+        let (fwd, overflow) = start.0.overflowing_add(diff);
+        (Self(fwd), overflow)
+    }
+
+    fn backward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let diff = count.wrapping_mul(Page4K::SIZE);
+        let (back, overflow) = start.0.overflowing_sub(diff);
+        (Self(back), overflow)
+    }
+
     fn forward_checked(start: Self, count: usize) -> Option<Self> {
         let diff = count.checked_mul(Page1G::SIZE)?;
         let fwd = start.0.checked_add(diff)?;
@@ -422,6 +458,18 @@ impl Step for V512GA {
         let start = start.0 / Page512G::SIZE;
         let end = end.0 / Page512G::SIZE;
         usize::steps_between(&start, &end)
+    }
+
+    fn forward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let diff = count.wrapping_mul(Page4K::SIZE);
+        let (fwd, overflow) = start.0.overflowing_add(diff);
+        (Self(fwd), overflow)
+    }
+
+    fn backward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let diff = count.wrapping_mul(Page4K::SIZE);
+        let (back, overflow) = start.0.overflowing_sub(diff);
+        (Self(back), overflow)
     }
 
     fn forward_checked(start: Self, count: usize) -> Option<Self> {
