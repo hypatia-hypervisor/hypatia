@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#![feature(allocator_api)]
 #![feature(pointer_is_aligned_to)]
 #![feature(sync_unsafe_cell)]
 #![cfg_attr(not(test), no_main)]
