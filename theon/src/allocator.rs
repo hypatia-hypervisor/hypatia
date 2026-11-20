@@ -81,7 +81,7 @@ impl BumpAlloc {
     /// satisfied, otherwise returns `Some` of a pair of blocks:
     /// the first contains the prefix before the (aligned) block
     /// and the second is the requested block itself.
-    pub(crate) fn try_alloc(&self, align: usize, size: usize) -> Option<(Block, Block)> {
+    pub(crate) fn try_alloc(&self, size: usize, align: usize) -> Option<(Block, Block)> {
         let base = self.arena.as_ptr();
         let mut first = ptr::null_mut();
         let mut adjust = 0;
@@ -330,7 +330,8 @@ impl QuickFit {
         }
         let new_layout = Layout::from_size_align(new_size, layout.align()).expect("layout");
         let (size, align) = Self::adjust(new_layout);
-        if size == layout.size() && align == layout.align() {
+        let (osize, oalign) = Self::adjust(layout);
+        if size == osize && align == oalign {
             return block;
         }
         let np = self.malloc(new_layout);
@@ -396,6 +397,7 @@ impl QuickFit {
                         align = MIN_ALLOC_SIZE;
                         hblock.cast()
                     })
+                    .or(Some(hblock))
                     .expect("allocated header block");
                 let header = Header::new(block, size, align, None);
                 unsafe {
@@ -433,20 +435,21 @@ impl QuickFit {
     where
         F: Fn(&Header) -> bool,
     {
+        let head = list;
         let mut prev: Option<NonNull<Header>> = None;
-        while let Some(mut node) = list {
-            let node = unsafe { node.as_mut() };
+        while let Some(mut nodeptr) = list {
+            let node = unsafe { nodeptr.as_mut() };
+            let nodeptr = Some(nodeptr);
             if predicate(node) {
                 let next = node.next.take();
                 if let Some(mut prev) = prev {
                     let prev = unsafe { prev.as_mut() };
                     prev.next = next;
-                } else {
-                    list = next;
+                    return (nodeptr, head);
                 }
-                return (NonNull::new(node), list);
+                return (nodeptr, next);
             }
-            prev = NonNull::new(node);
+            prev = nodeptr;
             list = node.next;
         }
         (None, list)
